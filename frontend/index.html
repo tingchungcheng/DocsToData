@@ -3,342 +3,566 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Go Invoice</title>
+    <title>DocsToData</title>
     <link rel="icon" type="image/png" href="/frontend/assets/logo.png" />
-    <link rel="stylesheet" href="/frontend/styles.css?v=6" />
+    <!-- Fonts are optional: the stylesheet falls back to system fonts so the
+         app still looks right fully offline (local-first). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="/frontend/styles.css?v=7" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <img class="brand-mark" src="/frontend/assets/logo.png" alt="Go Invoice logo" />
-        <span class="brand-name">Go Invoice</span>
-      </div>
-
-      <nav class="nav" id="mainNav" aria-label="Main navigation">
-        <button class="nav-link" data-view="rag" type="button">Upload &amp; RAG</button>
-        <button class="nav-link" data-view="evaluation" type="button">Evaluation Dashboard</button>
-        <button class="nav-link" data-view="library" type="button">Document Library</button>
-        <button class="nav-link" data-view="auth" type="button">Account</button>
-        <span class="nav-indicator" id="navIndicator" aria-hidden="true"></span>
-      </nav>
-
-      <div class="topbar-actions">
-        <select id="provider" title="Choose model provider">
-          <option value="ollama" selected>Ollama (local)</option>
-          <option value="openai">OpenAI</option>
-        </select>
-        <div id="userBadge" class="user-badge hidden">
-          <span class="user-avatar" id="userAvatar">U</span>
-          <span class="user-name" id="userName">User</span>
-          <button id="topbarSignOutBtn" class="btn btn-ghost btn-sm" type="button">Sign out</button>
+    <div class="app" id="app">
+      <!-- ------------------------------------------------------------- -->
+      <!-- Sidebar                                                        -->
+      <!-- ------------------------------------------------------------- -->
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <img class="brand-mark" src="/frontend/assets/logo.png" alt="" />
+          <div class="brand-text">
+            <span class="brand-name">DocsToData</span>
+            <span class="brand-tag" data-i18n="brand.tag">Local-first document agent</span>
+          </div>
+          <button class="sidebar-close icon-only" id="sidebarClose" type="button" aria-label="Close menu">×</button>
         </div>
-        <button id="topbarSignInBtn" class="btn btn-primary btn-sm hidden" type="button">Sign in</button>
-      </div>
-    </header>
 
-    <div id="guestBanner" class="guest-banner hidden">
-      <span>You're browsing as a guest — this is sample data and actions are disabled.</span>
-      <button id="guestSignInBtn" class="btn btn-primary btn-sm" type="button">Sign in</button>
+        <button class="new-chat-btn" id="newChatBtn" type="button">
+          <span class="new-chat-plus" aria-hidden="true">+</span>
+          <span data-i18n="nav.newChat">New chat</span>
+          <kbd class="kbd">⌘K</kbd>
+        </button>
+
+        <nav class="nav" id="mainNav" aria-label="Main navigation">
+          <span class="nav-indicator" id="navIndicator" aria-hidden="true"></span>
+          <button class="nav-link" data-view="rag" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z" /></svg>
+            <span data-i18n="nav.chat">Chat</span>
+          </button>
+          <button class="nav-link" data-view="history" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+            <span data-i18n="nav.history">History</span>
+          </button>
+          <button class="nav-link" data-view="library" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5" /></svg>
+            <span data-i18n="nav.library">Library</span>
+          </button>
+          <button class="nav-link" data-view="evaluation" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
+            <span data-i18n="nav.evaluation">Evaluation</span>
+          </button>
+          <button class="nav-link" data-view="settings" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" /></svg>
+            <span data-i18n="nav.settings">Settings</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-section">
+          <p class="sidebar-label" data-i18n="nav.recent">Recent</p>
+          <ul class="recent-list" id="recentList"></ul>
+        </div>
+
+        <div class="sidebar-footer">
+          <label class="provider-field">
+            <span class="sidebar-label" data-i18n="nav.model">Model</span>
+            <select id="provider" title="Choose model provider">
+              <option value="ollama" selected>Ollama · local</option>
+              <option value="openai">OpenAI · cloud</option>
+            </select>
+          </label>
+          <div class="local-badge" id="localBadge">
+            <span class="local-dot" aria-hidden="true"></span>
+            <span id="localBadgeText" data-i18n="nav.localOn">Running on this computer</span>
+          </div>
+          <div id="userBadge" class="user-badge hidden">
+            <span class="user-avatar" id="userAvatar">U</span>
+            <span class="user-name" id="userName">User</span>
+            <button id="topbarSignOutBtn" class="btn btn-ghost btn-sm" type="button">Sign out</button>
+          </div>
+          <button id="topbarSignInBtn" class="btn btn-primary btn-sm hidden" type="button" data-i18n="auth.signIn">Sign in</button>
+        </div>
+      </aside>
+      <div class="sidebar-scrim" id="sidebarScrim"></div>
+
+      <!-- ------------------------------------------------------------- -->
+      <!-- Main                                                           -->
+      <!-- ------------------------------------------------------------- -->
+      <div class="main">
+        <header class="mobile-bar">
+          <button class="icon-only" id="sidebarOpen" type="button" aria-label="Open menu">☰</button>
+          <span class="brand-name">DocsToData</span>
+          <span></span>
+        </header>
+
+        <div id="guestBanner" class="guest-banner hidden">
+          <span data-i18n="guest.banner">You're browsing as a guest. This is sample data and actions are disabled.</span>
+          <button id="guestSignInBtn" class="btn btn-primary btn-sm" type="button" data-i18n="auth.signIn">Sign in</button>
+        </div>
+
+        <main class="views" id="views">
+          <!-- Chat ---------------------------------------------------- -->
+          <section class="view view-chat" id="view-rag" data-view="rag">
+            <div class="chat-shell">
+              <header class="chat-header">
+                <div class="chat-title-wrap">
+                  <h1 class="chat-title" id="chatTitle">New chat</h1>
+                  <span class="chat-meta" id="chatMeta"></span>
+                </div>
+                <button id="documentsBtn" class="documents-btn" type="button" title="Choose which PDFs the chat uses">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /></svg>
+                  <span id="documentsBtnLabel">PDFs (0)</span>
+                </button>
+              </header>
+
+              <div class="chat-scroll" id="chatScroll">
+                <div class="chat-empty" id="chatEmpty">
+                  <p class="eyebrow" data-i18n="chat.eyebrow">Documents in, data out</p>
+                  <h2 class="display" id="heroTitle">What are we working on today?</h2>
+                  <p class="hero-sub" data-i18n="chat.heroSub">
+                    Drop in quotations, purchase orders or invoices, then type # to pick a tool.
+                  </p>
+                  <div class="starter-grid" id="starterGrid">
+                    <button class="starter" type="button" data-starter="compare">
+                      <span class="starter-icon">⇄</span>
+                      <span class="starter-title" data-i18n="starter.compare.title">Compare quotations</span>
+                      <span class="starter-body" data-i18n="starter.compare.body">See which vendor is better, and why.</span>
+                    </button>
+                    <button class="starter" type="button" data-starter="extract">
+                      <span class="starter-icon">⧉</span>
+                      <span class="starter-title" data-i18n="starter.extract.title">Extract a PO or invoice</span>
+                      <span class="starter-body" data-i18n="starter.extract.body">Pull out totals, dates and line items.</span>
+                    </button>
+                    <button class="starter" type="button" data-starter="plan">
+                      <span class="starter-icon">☰</span>
+                      <span class="starter-title" data-i18n="starter.plan.title">Plan the next steps</span>
+                      <span class="starter-body" data-i18n="starter.plan.body">Turn a pile of documents into a to-do list.</span>
+                    </button>
+                  </div>
+                </div>
+                <div id="messages" class="messages" aria-live="polite"></div>
+              </div>
+
+              <div class="composer-wrap">
+                <div class="command-menu hidden" id="commandMenu" role="listbox" aria-label="Tools"></div>
+                <form class="composer" id="composer" autocomplete="off">
+                  <div class="context-row" id="contextRow"></div>
+                  <div class="composer-main">
+                    <span class="command-pill hidden" id="commandPill"></span>
+                    <textarea
+                      id="questionInput"
+                      rows="1"
+                      placeholder="Ask anything, or type # for tools"
+                      data-i18n-placeholder="chat.placeholder"
+                    ></textarea>
+                  </div>
+                  <div class="composer-bar">
+                    <button id="uploadBtn" class="composer-icon" type="button" title="Attach PDFs">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5 12.4 19a5 5 0 0 1-7-7l8-8a3.3 3.3 0 0 1 4.7 4.7l-8 8a1.7 1.7 0 0 1-2.4-2.4L15 7" /></svg>
+                    </button>
+                    <button id="hashBtn" class="composer-icon composer-hash" type="button" title="Tools">#</button>
+                    <span class="composer-hint" id="composerHint" data-i18n="chat.hint">Enter to send · Shift+Enter for a new line</span>
+                    <button id="sendBtn" class="send-btn" type="submit" aria-label="Send">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                    </button>
+                  </div>
+                </form>
+                <input id="fileInput" type="file" accept=".pdf" multiple hidden />
+              </div>
+            </div>
+          </section>
+
+          <!-- History ------------------------------------------------- -->
+          <section class="view" id="view-history" data-view="history">
+            <div class="view-inner">
+              <div class="view-header">
+                <p class="eyebrow" data-i18n="history.eyebrow">Saved on this device</p>
+                <h1 class="display" data-i18n="history.title">History</h1>
+              </div>
+              <div class="history-layout">
+                <div class="card calendar-card">
+                  <div class="calendar-head">
+                    <button class="btn btn-ghost btn-sm" id="calPrev" type="button" aria-label="Previous month">‹</button>
+                    <h2 id="calTitle">Month</h2>
+                    <button class="btn btn-ghost btn-sm" id="calNext" type="button" aria-label="Next month">›</button>
+                  </div>
+                  <div class="calendar-weekdays" id="calWeekdays"></div>
+                  <div class="calendar-grid" id="calGrid"></div>
+                  <button class="btn btn-ghost btn-sm cal-today" id="calToday" type="button" data-i18n="history.today">Today</button>
+                </div>
+                <div class="card history-day-card">
+                  <h2 id="historyDayTitle">Today</h2>
+                  <ul class="history-sessions" id="historySessions"></ul>
+                  <p class="card-hint hidden" id="historyEmpty" data-i18n="history.empty">No chats on this day.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Document Library --------------------------------------- -->
+          <section class="view" id="view-library" data-view="library">
+            <div class="view-inner">
+              <div class="view-header">
+                <p class="eyebrow" data-i18n="library.eyebrow">Indexed documents</p>
+                <h1 class="display" data-i18n="library.title">Library</h1>
+                <p class="subtitle" data-i18n="library.sub">Everything indexed for the selected model, with page and chunk counts.</p>
+              </div>
+
+              <div class="library-toolbar">
+                <span class="library-count" id="libraryCount">0 documents</span>
+                <button id="libraryUploadBtn" class="btn btn-primary" type="button" data-i18n="library.upload">+ Upload PDFs</button>
+              </div>
+
+              <div id="libraryEmpty" class="empty-state hidden">
+                <p data-i18n="library.empty">No documents indexed yet for this model.</p>
+                <button id="libraryEmptyUploadBtn" class="btn btn-primary" type="button" data-i18n="library.uploadFirst">Upload your first PDF</button>
+              </div>
+
+              <div class="card-grid" id="libraryGrid"></div>
+            </div>
+          </section>
+
+          <!-- Evaluation Dashboard ----------------------------------- -->
+          <section class="view" id="view-evaluation" data-view="evaluation">
+            <div class="view-inner">
+              <div class="view-header">
+                <p class="eyebrow" data-i18n="eval.eyebrow">Quality</p>
+                <h1 class="display" data-i18n="eval.title">Evaluation</h1>
+                <p class="subtitle" data-i18n="eval.sub">Run saved test questions against the live pipeline, grade the answers, and track quality over time.</p>
+              </div>
+
+              <div class="eval-metrics-header">
+                <div class="eval-legend" id="evalLegend">
+                  <span class="eval-legend-item"><span class="eval-legend-dot retrieval"></span>Retrieval</span>
+                  <span class="eval-legend-item"><span class="eval-legend-dot generation"></span>Generation</span>
+                  <span class="eval-legend-item"><span class="eval-legend-dot quality"></span>Quality</span>
+                </div>
+                <div class="view-toggle" id="evalViewToggle" role="group" aria-label="Metric view">
+                  <button type="button" class="view-toggle-btn active" data-eval-view="card">Card view</button>
+                  <button type="button" class="view-toggle-btn" data-eval-view="graph">Graph view</button>
+                </div>
+              </div>
+
+              <div class="eval-score-grid" id="evalScoreGridCard">
+                <div class="card summary-card metric-retrieval" data-metric="recall">
+                  <span class="summary-label">Recall@K</span>
+                  <span class="summary-value" id="evalRecall">–</span>
+                </div>
+                <div class="card summary-card metric-retrieval" data-metric="precision">
+                  <span class="summary-label">Precision@K</span>
+                  <span class="summary-value" id="evalPrecision">–</span>
+                </div>
+                <div class="card summary-card metric-retrieval" data-metric="mrr">
+                  <span class="summary-label">MRR</span>
+                  <span class="summary-value" id="evalMrr">–</span>
+                </div>
+                <div class="card summary-card metric-generation" data-metric="faithfulness">
+                  <span class="summary-label">Faithfulness</span>
+                  <span class="summary-value" id="evalFaithfulness">–</span>
+                </div>
+                <div class="card summary-card metric-generation" data-metric="relevance">
+                  <span class="summary-label">Relevance</span>
+                  <span class="summary-value" id="evalRelevance">–</span>
+                </div>
+                <div class="card summary-card metric-generation" data-metric="groundedness">
+                  <span class="summary-label">Groundedness</span>
+                  <span class="summary-value" id="evalGroundedness">–</span>
+                </div>
+                <div class="card summary-card metric-quality" data-metric="correctness">
+                  <span class="summary-label">Correctness</span>
+                  <span class="summary-value" id="evalCorrectness">–</span>
+                </div>
+                <div class="card summary-card metric-quality" data-metric="citation_accuracy">
+                  <span class="summary-label">Citation Acc.</span>
+                  <span class="summary-value" id="evalCitationAccuracy">–</span>
+                </div>
+                <div class="card summary-card metric-quality" data-metric="hallucination">
+                  <span class="summary-label">Hallucination</span>
+                  <span class="summary-value" id="evalHallucination">–</span>
+                </div>
+                <div class="card summary-card metric-quality" data-metric="pass_rate">
+                  <span class="summary-label">Pass rate (human)</span>
+                  <span class="summary-value" id="evalPassRate">–</span>
+                </div>
+              </div>
+
+              <div class="metric-tooltip hidden" id="evalMetricTooltip" role="tooltip">
+                <p class="metric-tooltip-title" id="evalMetricTooltipTitle"></p>
+                <p class="metric-tooltip-body" id="evalMetricTooltipBody"></p>
+              </div>
+
+              <div class="card eval-chart-card hidden" id="evalScoreGridGraph">
+                <canvas id="evalScoreChart" height="220"></canvas>
+                <p class="card-hint" id="evalChartEmptyHint">No scored runs yet. Run an evaluation with judge scoring or ground truth to populate this chart.</p>
+              </div>
+
+              <div class="eval-metric-group system-metric-group">
+                <h3>System</h3>
+                <div class="card-grid summary-grid">
+                  <div class="card summary-card" data-metric="total_runs">
+                    <span class="summary-label">Total runs</span>
+                    <span class="summary-value" id="evalTotalRuns">0</span>
+                  </div>
+                  <div class="card summary-card" data-metric="avg_latency">
+                    <span class="summary-label">Avg latency</span>
+                    <span class="summary-value" id="evalAvgLatency">0 ms</span>
+                  </div>
+                  <div class="card summary-card" data-metric="avg_cost">
+                    <span class="summary-label">Avg cost / query</span>
+                    <span class="summary-value" id="evalAvgCost">–</span>
+                  </div>
+                  <div class="card summary-card" data-metric="error_rate">
+                    <span class="summary-label">Error rate</span>
+                    <span class="summary-value" id="evalErrorRate">–</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="two-col">
+                <div class="card">
+                  <h2>Test cases</h2>
+                  <p class="card-hint">Save a question you want to keep re-testing across runs. Ground truth (document/page or chunk_id) enables Retrieval metrics.</p>
+                  <form id="evalCaseForm" class="stacked-form">
+                    <input id="evalCaseQuestion" type="text" placeholder="Question, e.g. What is the total budget?" required />
+                    <textarea id="evalCaseExpected" placeholder="Expected answer (optional, used for Correctness)" rows="2"></textarea>
+                    <input id="evalCaseGroundTruthDoc" type="text" placeholder="Ground truth document name (optional)" />
+                    <input id="evalCaseGroundTruthPage" type="number" min="1" placeholder="Ground truth page (optional)" />
+                    <button type="submit" class="btn btn-primary">Save test case</button>
+                  </form>
+                  <ul id="evalCaseList" class="eval-case-list"></ul>
+                </div>
+
+                <div class="card">
+                  <h2>Run a question</h2>
+                  <p class="card-hint">Runs against the currently selected model and indexed documents.</p>
+                  <form id="evalRunForm" class="stacked-form">
+                    <input id="evalRunQuestion" type="text" placeholder="Type a question to evaluate" required />
+                    <label class="checkbox-label">
+                      <input id="evalRunJudge" type="checkbox" checked />
+                      Run LLM-as-judge scoring (Generation + Quality metrics; costs one extra call)
+                    </label>
+                    <button type="submit" class="btn btn-primary" id="evalRunBtn">Run evaluation</button>
+                  </form>
+                  <div id="evalRunResult" class="eval-run-result hidden"></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <h2>Run history</h2>
+                <p class="card-hint">Grade each answer pass / fail, or rely on the LLM judge's Generation/Quality scores.</p>
+                <div id="evalHistoryList" class="eval-history-list"></div>
+                <div class="eval-pagination" id="evalPagination">
+                  <button type="button" class="btn btn-ghost btn-sm" id="evalPagePrev">‹ Prev</button>
+                  <span class="eval-pagination-status" id="evalPageStatus">Page 1 of 1</span>
+                  <button type="button" class="btn btn-ghost btn-sm" id="evalPageNext">Next ›</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Settings ------------------------------------------------ -->
+          <section class="view" id="view-settings" data-view="settings">
+            <div class="view-inner">
+              <div class="view-header">
+                <p class="eyebrow" data-i18n="settings.eyebrow">Preferences</p>
+                <h1 class="display" data-i18n="settings.title">Settings</h1>
+              </div>
+
+              <div class="settings-layout">
+                <nav class="settings-tabs" id="settingsTabs" aria-label="Settings sections">
+                  <button class="settings-tab active" type="button" data-tab="profile" data-i18n="settings.profile">Profile</button>
+                  <button class="settings-tab" type="button" data-tab="language" data-i18n="settings.language">Language</button>
+                  <button class="settings-tab" type="button" data-tab="currency" data-i18n="settings.currency">Currency</button>
+                  <button class="settings-tab" type="button" data-tab="workspace" data-i18n="settings.workspace">Local folders</button>
+                  <button class="settings-tab" type="button" data-tab="appearance" data-i18n="settings.appearance">Appearance</button>
+                </nav>
+
+                <div class="settings-panels">
+                  <!-- Profile -->
+                  <div class="settings-panel active" data-panel="profile">
+                    <div class="card">
+                      <h2 data-i18n="settings.profile">Profile</h2>
+                      <p class="card-hint" data-i18n="settings.profileHint">Shown in the app and on saved reports. Kept on this device.</p>
+                      <div class="stacked-form">
+                        <label class="field">
+                          <span data-i18n="settings.displayName">Display name</span>
+                          <input id="settingDisplayName" type="text" placeholder="Your name" />
+                        </label>
+                        <label class="field">
+                          <span data-i18n="settings.company">Company</span>
+                          <input id="settingCompany" type="text" placeholder="Company name" />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="card auth-card" id="authDevModePanel">
+                      <h2 data-i18n="auth.localTitle">Local mode</h2>
+                      <p data-i18n="auth.localBody">No sign-in is needed. Everything runs as a local user on this computer.</p>
+                      <p class="card-hint">Set <code>COGNITO_REGION</code>, <code>COGNITO_USER_POOL_ID</code>, and <code>COGNITO_CLIENT_ID</code> to turn on sign-in for a shared server.</p>
+                    </div>
+
+                    <div class="card auth-card hidden" id="authLoggedOutPanel">
+                      <div id="authLoginForm">
+                        <h2 data-i18n="auth.signIn">Sign in</h2>
+                        <p>Sign in with your email and password.</p>
+                        <form id="loginForm" class="stacked-form">
+                          <input id="loginEmail" type="email" placeholder="Email" autocomplete="username" required />
+                          <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required />
+                          <button type="submit" class="btn btn-primary" data-i18n="auth.signIn">Sign in</button>
+                        </form>
+                        <p class="auth-switch">
+                          No account? <button id="showSignupBtn" class="link-btn" type="button">Create one</button>
+                        </p>
+                        <div class="auth-actions">
+                          <button id="signInSsoBtn" class="btn btn-secondary hidden" type="button">Continue with SSO</button>
+                        </div>
+                        <div class="auth-divider"><span>or</span></div>
+                        <button id="continueGuestBtn" class="btn btn-ghost btn-block" type="button">Continue as guest</button>
+                        <p class="auth-guest-hint">Preview all screens with sample data. No sign-in, nothing is saved.</p>
+                      </div>
+
+                      <div id="authSignupForm" class="hidden">
+                        <h2>Create account</h2>
+                        <p>Password needs 8+ characters with upper &amp; lowercase letters and a number.</p>
+                        <form id="signupForm" class="stacked-form">
+                          <input id="signupEmail" type="email" placeholder="Email" autocomplete="username" required />
+                          <input id="signupPassword" type="password" placeholder="Password" autocomplete="new-password" required />
+                          <button type="submit" class="btn btn-primary">Create account</button>
+                        </form>
+                        <p class="auth-switch">
+                          Already have an account? <button id="showLoginBtn" class="link-btn" type="button">Sign in</button>
+                        </p>
+                      </div>
+
+                      <div id="authConfirmForm" class="hidden">
+                        <h2>Verify your email</h2>
+                        <p>We sent a confirmation code to <strong id="confirmEmailLabel"></strong>.</p>
+                        <form id="confirmForm" class="stacked-form">
+                          <input id="confirmCode" type="text" inputmode="numeric" placeholder="Confirmation code" required />
+                          <button type="submit" class="btn btn-primary">Verify</button>
+                        </form>
+                        <p class="auth-switch">
+                          Didn't get a code? <button id="resendCodeBtn" class="link-btn" type="button">Resend code</button>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="card auth-card hidden" id="authLoggedInPanel">
+                      <h2 data-i18n="auth.signedIn">Signed in</h2>
+                      <div class="auth-profile">
+                        <span class="user-avatar user-avatar-lg" id="authUserAvatar">U</span>
+                        <div>
+                          <p class="auth-profile-name" id="authUserName">User</p>
+                          <p class="auth-profile-email" id="authUserEmail"></p>
+                          <p class="auth-profile-sub" id="authUserSub"></p>
+                        </div>
+                      </div>
+                      <button id="signOutBtn" class="btn btn-ghost" type="button">Sign out</button>
+                    </div>
+                  </div>
+
+                  <!-- Language -->
+                  <div class="settings-panel" data-panel="language">
+                    <div class="card">
+                      <h2 data-i18n="settings.language">Language</h2>
+                      <p class="card-hint" data-i18n="settings.languageHint">Changes the app and the language answers come back in.</p>
+                      <div class="choice-grid" id="languageChoices"></div>
+                    </div>
+                  </div>
+
+                  <!-- Currency -->
+                  <div class="settings-panel" data-panel="currency">
+                    <div class="card">
+                      <h2 data-i18n="settings.currency">Currency</h2>
+                      <p class="card-hint" data-i18n="settings.currencyHint">Used to show amounts and when comparing quotations.</p>
+                      <div class="choice-grid" id="currencyChoices"></div>
+                      <p class="currency-preview" id="currencyPreview"></p>
+                    </div>
+                  </div>
+
+                  <!-- Workspace -->
+                  <div class="settings-panel" data-panel="workspace">
+                    <div class="card">
+                      <h2 data-i18n="settings.workspace">Local folders</h2>
+                      <p class="card-hint" data-i18n="settings.workspaceHint">Saved results go to a folder on this computer. Nothing is uploaded to the cloud.</p>
+                      <p class="workspace-root">
+                        <span data-i18n="settings.workspaceRoot">Saving to</span>
+                        <code id="workspaceRoot">data/workspace</code>
+                      </p>
+                      <div class="stacked-form">
+                        <label class="field">
+                          <span data-i18n="doc.quotation">Quotation</span>
+                          <input id="folderQuotation" type="text" />
+                        </label>
+                        <label class="field">
+                          <span data-i18n="doc.po">Purchase order</span>
+                          <input id="folderPo" type="text" />
+                        </label>
+                        <label class="field">
+                          <span data-i18n="doc.invoice">Invoice</span>
+                          <input id="folderInvoice" type="text" />
+                        </label>
+                        <label class="field">
+                          <span data-i18n="doc.other">Other</span>
+                          <input id="folderOther" type="text" />
+                        </label>
+                        <label class="checkbox-label">
+                          <input id="folderByMonth" type="checkbox" />
+                          <span data-i18n="settings.byMonth">Add a year-month subfolder, e.g. Invoices/2026-11</span>
+                        </label>
+                      </div>
+                      <h3 class="recent-files-title" data-i18n="settings.recentFiles">Recently saved</h3>
+                      <ul class="workspace-files" id="workspaceFiles"></ul>
+                    </div>
+                  </div>
+
+                  <!-- Appearance -->
+                  <div class="settings-panel" data-panel="appearance">
+                    <div class="card">
+                      <h2 data-i18n="settings.appearance">Appearance</h2>
+                      <div class="choice-grid" id="themeChoices"></div>
+                      <label class="checkbox-label">
+                        <input id="settingMotion" type="checkbox" />
+                        <span data-i18n="settings.motion">Play animations</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
 
-    <main class="views" id="views">
-      <!-- Upload & RAG -->
-      <section class="view" id="view-rag" data-view="rag">
-        <div class="view-inner">
-          <div class="chat-card card">
-            <div class="view-header">
-              <h1>Upload &amp; RAG</h1>
-              <p class="subtitle">Upload PDFs with +, then ask, summarize, or compare documents.</p>
-            </div>
-
-            <div id="messages" class="messages"></div>
-
-            <div class="controls">
-              <button id="documentsBtn" class="documents-btn hidden" type="button" title="View indexed PDFs">
-                PDFs (0)
-              </button>
-              <span class="controls-hint">Selected provider applies across the whole app.</span>
-            </div>
-
-            <div class="chat-input-row">
-              <button id="uploadBtn" class="icon-btn" type="button" title="Upload and ingest PDF">+</button>
-              <input id="questionInput" type="text" placeholder="Ask: What is this document about?" />
-              <button id="summarizeBtn" class="summarize-btn" type="button">Summarize</button>
-              <button id="sendBtn" class="send-btn" type="button">Send</button>
-            </div>
-
-            <input id="fileInput" type="file" accept=".pdf" multiple hidden />
-          </div>
-        </div>
-      </section>
-
-      <!-- Evaluation Dashboard -->
-      <section class="view" id="view-evaluation" data-view="evaluation">
-        <div class="view-inner">
-          <div class="view-header">
-            <h1>Evaluation Dashboard</h1>
-            <p class="subtitle">Run saved test questions against the live pipeline, grade the answers, and track quality over time.</p>
-          </div>
-
-          <div class="eval-metrics-header">
-            <div class="eval-legend" id="evalLegend">
-              <span class="eval-legend-item"><span class="eval-legend-dot retrieval"></span>Retrieval</span>
-              <span class="eval-legend-item"><span class="eval-legend-dot generation"></span>Generation</span>
-              <span class="eval-legend-item"><span class="eval-legend-dot quality"></span>Quality</span>
-            </div>
-            <div class="view-toggle" id="evalViewToggle" role="group" aria-label="Metric view">
-              <button type="button" class="view-toggle-btn active" data-eval-view="card">Card view</button>
-              <button type="button" class="view-toggle-btn" data-eval-view="graph">Graph view</button>
-            </div>
-          </div>
-
-          <!-- Card view: Retrieval + Generation + Quality score metrics, 5 per row so 10 items fit in 2 rows -->
-          <div class="eval-score-grid" id="evalScoreGridCard">
-            <div class="card summary-card metric-retrieval" data-metric="recall">
-              <span class="summary-label">Recall@K</span>
-              <span class="summary-value" id="evalRecall">–</span>
-            </div>
-            <div class="card summary-card metric-retrieval" data-metric="precision">
-              <span class="summary-label">Precision@K</span>
-              <span class="summary-value" id="evalPrecision">–</span>
-            </div>
-            <div class="card summary-card metric-retrieval" data-metric="mrr">
-              <span class="summary-label">MRR</span>
-              <span class="summary-value" id="evalMrr">–</span>
-            </div>
-            <div class="card summary-card metric-generation" data-metric="faithfulness">
-              <span class="summary-label">Faithfulness</span>
-              <span class="summary-value" id="evalFaithfulness">–</span>
-            </div>
-            <div class="card summary-card metric-generation" data-metric="relevance">
-              <span class="summary-label">Relevance</span>
-              <span class="summary-value" id="evalRelevance">–</span>
-            </div>
-            <div class="card summary-card metric-generation" data-metric="groundedness">
-              <span class="summary-label">Groundedness</span>
-              <span class="summary-value" id="evalGroundedness">–</span>
-            </div>
-            <div class="card summary-card metric-quality" data-metric="correctness">
-              <span class="summary-label">Correctness</span>
-              <span class="summary-value" id="evalCorrectness">–</span>
-            </div>
-            <div class="card summary-card metric-quality" data-metric="citation_accuracy">
-              <span class="summary-label">Citation Acc.</span>
-              <span class="summary-value" id="evalCitationAccuracy">–</span>
-            </div>
-            <div class="card summary-card metric-quality" data-metric="hallucination">
-              <span class="summary-label">Hallucination</span>
-              <span class="summary-value" id="evalHallucination">–</span>
-            </div>
-            <div class="card summary-card metric-quality" data-metric="pass_rate">
-              <span class="summary-label">Pass rate (human)</span>
-              <span class="summary-value" id="evalPassRate">–</span>
-            </div>
-          </div>
-
-          <!-- Shared hover tooltip explaining how each metric is calculated -->
-          <div class="metric-tooltip hidden" id="evalMetricTooltip" role="tooltip">
-            <p class="metric-tooltip-title" id="evalMetricTooltipTitle"></p>
-            <p class="metric-tooltip-body" id="evalMetricTooltipBody"></p>
-          </div>
-
-          <!-- Graph view: same metrics as a grouped bar chart, colored by category legend above -->
-          <div class="card eval-chart-card hidden" id="evalScoreGridGraph">
-            <canvas id="evalScoreChart" height="220"></canvas>
-            <p class="card-hint" id="evalChartEmptyHint">No scored runs yet — run an evaluation with judge scoring or ground truth to populate this chart.</p>
-          </div>
-
-          <div class="eval-metric-group system-metric-group">
-            <h3>System</h3>
-            <div class="card-grid summary-grid">
-              <div class="card summary-card" data-metric="total_runs">
-                <span class="summary-label">Total runs</span>
-                <span class="summary-value" id="evalTotalRuns">0</span>
-              </div>
-              <div class="card summary-card" data-metric="avg_latency">
-                <span class="summary-label">Avg latency</span>
-                <span class="summary-value" id="evalAvgLatency">0 ms</span>
-              </div>
-              <div class="card summary-card" data-metric="avg_cost">
-                <span class="summary-label">Avg cost / query</span>
-                <span class="summary-value" id="evalAvgCost">–</span>
-              </div>
-              <div class="card summary-card" data-metric="error_rate">
-                <span class="summary-label">Error rate</span>
-                <span class="summary-value" id="evalErrorRate">–</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="two-col">
-            <div class="card">
-              <h2>Test cases</h2>
-              <p class="card-hint">Save a question you want to keep re-testing across runs. Ground truth (document/page or chunk_id) enables Retrieval metrics.</p>
-              <form id="evalCaseForm" class="stacked-form">
-                <input id="evalCaseQuestion" type="text" placeholder="Question, e.g. What is the total budget?" required />
-                <textarea id="evalCaseExpected" placeholder="Expected answer (optional, used for Correctness)" rows="2"></textarea>
-                <input id="evalCaseGroundTruthDoc" type="text" placeholder="Ground truth document name (optional)" />
-                <input id="evalCaseGroundTruthPage" type="number" min="1" placeholder="Ground truth page (optional)" />
-                <button type="submit" class="btn btn-primary">Save test case</button>
-              </form>
-              <ul id="evalCaseList" class="eval-case-list"></ul>
-            </div>
-
-            <div class="card">
-              <h2>Run a question</h2>
-              <p class="card-hint">Runs against the currently selected provider and indexed documents.</p>
-              <form id="evalRunForm" class="stacked-form">
-                <input id="evalRunQuestion" type="text" placeholder="Type a question to evaluate" required />
-                <label class="checkbox-label">
-                  <input id="evalRunJudge" type="checkbox" checked />
-                  Run LLM-as-judge scoring (Generation + Quality metrics; costs one extra call)
-                </label>
-                <button type="submit" class="btn btn-primary" id="evalRunBtn">Run evaluation</button>
-              </form>
-              <div id="evalRunResult" class="eval-run-result hidden"></div>
-            </div>
-          </div>
-
-          <div class="card">
-            <h2>Run history</h2>
-            <p class="card-hint">Grade each answer pass / fail, or rely on the LLM judge's Generation/Quality scores.</p>
-            <div id="evalHistoryList" class="eval-history-list"></div>
-            <div class="eval-pagination" id="evalPagination">
-              <button type="button" class="btn btn-ghost btn-sm" id="evalPagePrev">‹ Prev</button>
-              <span class="eval-pagination-status" id="evalPageStatus">Page 1 of 1</span>
-              <button type="button" class="btn btn-ghost btn-sm" id="evalPageNext">Next ›</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Document Library -->
-      <section class="view" id="view-library" data-view="library">
-        <div class="view-inner">
-          <div class="view-header">
-            <h1>Document Library</h1>
-            <p class="subtitle">Everything indexed for the selected provider, with page and chunk counts.</p>
-          </div>
-
-          <div class="library-toolbar">
-            <span class="library-count" id="libraryCount">0 documents</span>
-            <button id="libraryUploadBtn" class="btn btn-primary" type="button">+ Upload PDFs</button>
-          </div>
-
-          <div id="libraryEmpty" class="empty-state hidden">
-            <p>No documents indexed yet for this provider.</p>
-            <button id="libraryEmptyUploadBtn" class="btn btn-primary" type="button">Upload your first PDF</button>
-          </div>
-
-          <div class="card-grid" id="libraryGrid"></div>
-        </div>
-      </section>
-
-      <!-- Account / Authentication -->
-      <section class="view" id="view-auth" data-view="auth">
-        <div class="view-inner view-inner-narrow">
-          <div class="view-header">
-            <h1>Account</h1>
-            <p class="subtitle">Sign in with your email and password to access Go Invoice.</p>
-          </div>
-
-          <div class="card auth-card" id="authDevModePanel">
-            <h2>Dev mode</h2>
-            <p>Authentication is not configured on this server, so every request runs as a local dev user.</p>
-            <p class="card-hint">Set <code>COGNITO_REGION</code>, <code>COGNITO_USER_POOL_ID</code>, and <code>COGNITO_CLIENT_ID</code> to enable Cognito login.</p>
-          </div>
-
-          <div class="card auth-card hidden" id="authLoggedOutPanel">
-            <!-- Login -->
-            <div id="authLoginForm">
-              <h2>Sign in</h2>
-              <p>Sign in with your email and password.</p>
-              <form id="loginForm" class="stacked-form">
-                <input id="loginEmail" type="email" placeholder="Email" autocomplete="username" required />
-                <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required />
-                <button type="submit" class="btn btn-primary">Sign in</button>
-              </form>
-              <p class="auth-switch">
-                No account? <button id="showSignupBtn" class="link-btn" type="button">Create one</button>
-              </p>
-              <div class="auth-actions">
-                <button id="signInSsoBtn" class="btn btn-secondary hidden" type="button">Continue with SSO</button>
-              </div>
-              <div class="auth-divider"><span>or</span></div>
-              <button id="continueGuestBtn" class="btn btn-ghost btn-block" type="button">Continue as guest</button>
-              <p class="auth-guest-hint">Preview all screens with sample data. No sign-in, nothing is saved.</p>
-            </div>
-
-            <!-- Sign up -->
-            <div id="authSignupForm" class="hidden">
-              <h2>Create account</h2>
-              <p>Password needs 8+ characters with upper &amp; lowercase letters and a number.</p>
-              <form id="signupForm" class="stacked-form">
-                <input id="signupEmail" type="email" placeholder="Email" autocomplete="username" required />
-                <input id="signupPassword" type="password" placeholder="Password" autocomplete="new-password" required />
-                <button type="submit" class="btn btn-primary">Create account</button>
-              </form>
-              <p class="auth-switch">
-                Already have an account? <button id="showLoginBtn" class="link-btn" type="button">Sign in</button>
-              </p>
-            </div>
-
-            <!-- Confirm sign up (verification code) -->
-            <div id="authConfirmForm" class="hidden">
-              <h2>Verify your email</h2>
-              <p>We sent a confirmation code to <strong id="confirmEmailLabel"></strong>.</p>
-              <form id="confirmForm" class="stacked-form">
-                <input id="confirmCode" type="text" inputmode="numeric" placeholder="Confirmation code" required />
-                <button type="submit" class="btn btn-primary">Verify</button>
-              </form>
-              <p class="auth-switch">
-                Didn't get a code? <button id="resendCodeBtn" class="link-btn" type="button">Resend code</button>
-              </p>
-            </div>
-          </div>
-
-          <div class="card auth-card hidden" id="authLoggedInPanel">
-            <h2>Signed in</h2>
-            <div class="auth-profile">
-              <span class="user-avatar user-avatar-lg" id="authUserAvatar">U</span>
-              <div>
-                <p class="auth-profile-name" id="authUserName">User</p>
-                <p class="auth-profile-email" id="authUserEmail"></p>
-                <p class="auth-profile-sub" id="authUserSub"></p>
-              </div>
-            </div>
-            <button id="signOutBtn" class="btn btn-ghost" type="button">Sign out</button>
-          </div>
-        </div>
-      </section>
-    </main>
-
+    <!-- Documents picker ------------------------------------------------- -->
     <div id="documentsOverlay" class="overlay hidden">
       <div class="documents-modal">
         <div class="documents-header">
-          <h2>Indexed PDFs</h2>
-          <button id="closeDocumentsBtn" class="close-btn" title="Close" type="button">x</button>
+          <h2 data-i18n="docs.title">Documents in this chat</h2>
+          <button id="closeDocumentsBtn" class="close-btn" title="Close" type="button">×</button>
         </div>
         <div class="documents-body">
-          <p class="documents-hint">Checked PDFs are used for Ask, Summarize, and Compare.</p>
+          <p class="documents-hint" data-i18n="docs.hint">Checked PDFs are used by the chat. Set each one's type so the right tools are suggested.</p>
           <div class="documents-panel">
             <ul id="documentsList" class="documents-list"></ul>
           </div>
         </div>
         <div class="documents-footer">
-          <button id="selectAllDocumentsBtn" class="documents-action-btn" type="button">Select all</button>
-          <button id="clearDocumentsBtn" class="documents-action-btn documents-action-btn-muted" type="button">
-            Clear all
-          </button>
+          <button id="selectAllDocumentsBtn" class="documents-action-btn" type="button" data-i18n="docs.selectAll">Select all</button>
+          <button id="clearDocumentsBtn" class="documents-action-btn documents-action-btn-muted" type="button" data-i18n="docs.clear">Clear all</button>
         </div>
       </div>
     </div>
 
+    <!-- Summary report --------------------------------------------------- -->
     <div id="reportOverlay" class="overlay hidden">
       <div class="report-modal">
         <div class="report-header">
-          <h2>Summary Report</h2>
-          <button id="closeReportBtn" class="close-btn" title="Close" type="button">x</button>
+          <h2 data-i18n="report.title">Summary report</h2>
+          <button id="closeReportBtn" class="close-btn" title="Close" type="button">×</button>
         </div>
         <pre id="reportContent" class="report-content"></pre>
         <div class="report-actions">
@@ -347,13 +571,16 @@
             <option value="pdf">.pdf</option>
             <option value="png">.png</option>
           </select>
-          <button id="exportReportBtn" class="export-btn" type="button">Export Report</button>
+          <button id="exportReportBtn" class="export-btn" type="button" data-i18n="report.export">Download</button>
         </div>
       </div>
     </div>
 
     <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
+    <!-- Third-party scripts are optional. If they can't load (offline), the
+         app still works: motion.js skips animations and the PDF export says so. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <script type="module" src="/frontend/js/main.js"></script>

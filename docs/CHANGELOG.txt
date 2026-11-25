@@ -1,4 +1,30 @@
-Go Invoice - Change Log
+DocsToData - Change Log
+========================================================================
+
+Phase 1 · Chat-first UI revamp (local-first)
+------------------------------------------------------------------------
+- Renamed the app back to DocsToData and rebuilt the shell: a sidebar
+  (New chat, Chat, History, Library, Evaluation, Settings, Recent chats,
+  model picker) replaces the top bar.
+- Chat with "#" tools: #ask, #compare (quotations: which vendor is better
+  and why), #extract (PO/invoice fields as a result card), #summarize
+  (downloadable report), #plan (step-by-step plan) and #action (save the
+  latest result). Type # for a menu, or use the suggested chips.
+- Each PDF gets a type (Quotation / Purchase order / Invoice / Other),
+  guessed from the file name and editable in the document picker; tools
+  are suggested and scoped by type.
+- Local-first saving: new /workspace and /workspace/save endpoints write
+  results into folders on this computer (DOCS_WORKSPACE_DIR, default
+  data/workspace) instead of S3, e.g. Invoices/2026-11/INV-20931.json.
+- History: chats are stored in this browser and shown on a month calendar.
+- Settings: profile, language (English, 繁體中文, 简体中文; answers follow
+  the language), currency (used for amounts and comparisons), local folder
+  names, theme (system/light/dark) and an animations switch.
+- GSAP animations (view transitions, sliding nav pill, message entrances,
+  hero text, number count-ups) and new typography (Instrument Serif,
+  Inter, JetBrains Mono). Both load from CDNs and fall back cleanly when
+  offline: no animations, system fonts, everything else works.
+
 ========================================================================
 
 Repo cleanup + docs refresh
