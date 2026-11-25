@@ -33,6 +33,7 @@ import {
 } from "./sessions.js";
 import { folderFor, formatMoney, getSettings, onSettingsChange } from "./settings.js";
 import { currentProvider, onProviderChange } from "./state.js";
+import { beginTeach, failTeach, isTeachOn, playTeach, replayTrace } from "./teach.js";
 import { showToast } from "./toast.js";
 
 const $ = (id) => document.getElementById(id);
@@ -492,6 +493,14 @@ function renderMessage(msg, { animate = true } = {}) {
     el = document.createElement("div");
     el.className = "msg-system";
     el.textContent = msg.text;
+    if (msg.teach) {
+      const how = document.createElement("button");
+      how.type = "button";
+      how.className = "msg-teach-link";
+      how.textContent = t("chat.howItWorked");
+      how.addEventListener("click", () => replayTrace(msg.teach));
+      el.append(" ", how);
+    }
   } else if (msg.role === "user") {
     el = document.createElement("div");
     el.className = "msg-user";
@@ -551,6 +560,9 @@ function renderMessage(msg, { animate = true } = {}) {
     }
     if (msg.command === "summarize") {
       actions.appendChild(actionButton(t("chat.openReport"), () => showReport(buildReportText(msg.text))));
+    }
+    if (msg.teach) {
+      actions.appendChild(actionButton(t("chat.howItWorked"), () => replayTrace(msg.teach), "teach"));
     }
     col.appendChild(actions);
     el.append(avatar, col);
@@ -709,15 +721,25 @@ async function runTool(cmd, text) {
   const payload = { provider: currentProvider(), question, intent: cmd.intent };
   if (filterNeeded) payload.source_filter = docs;
   if (cmd.id !== "ask") payload.top_k = 8;
+  const teach = isTeachOn();
+  if (teach) {
+    payload.teach = true;
+    beginTeach("query");
+  }
 
   const typing = addTyping();
   let data;
   try {
     data = await api.post("/query", payload);
+  } catch (err) {
+    if (teach) failTeach(err.message);
+    throw err;
   } finally {
     typing.remove();
   }
   const answer = data.answer || "(no answer)";
+  const trace = data.teach || null;
+  if (teach) playTeach(trace);
 
   if (cmd.id === "extract") {
     const parsed = parseJsonAnswer(answer);
@@ -740,6 +762,7 @@ async function runTool(cmd, text) {
       text: parsed ? "" : answer,
       card: { type: "extract", data: parsed, docType, sources: docs },
       result,
+      teach: trace,
     });
     return;
   }
@@ -754,12 +777,12 @@ async function runTool(cmd, text) {
       content: `# ${cmd.id === "compare" ? "Quotation comparison" : "Summary"}\n\nDocuments: ${docs.join(", ")}\n\n${body}\n`,
     };
     lastResult = result;
-    addMessage({ role: "bot", command: cmd.id, text: answer, result });
+    addMessage({ role: "bot", command: cmd.id, text: answer, result, teach: trace });
     if (cmd.id === "summarize") showReport(body);
     return;
   }
 
-  addMessage({ role: "bot", command: cmd.id, text: answer });
+  addMessage({ role: "bot", command: cmd.id, text: answer, teach: trace });
 }
 
 async function saveResult(result) {
@@ -833,9 +856,12 @@ async function ingestFiles(fileList) {
 
   const form = new FormData();
   form.append("provider", currentProvider());
+  const teach = isTeachOn();
+  if (teach) form.append("teach", "true");
   for (const file of files) form.append("files", file);
 
   system(t("chat.uploading", { count: files.length }));
+  if (teach) beginTeach("ingest");
   const typing = addTyping();
   try {
     const token = getAccessToken();
@@ -852,9 +878,17 @@ async function ingestFiles(fileList) {
     if (!res.ok) throw new Error(json.detail || "Ingest failed");
     const ingested = Array.isArray(json.ingest) ? json.ingest : [json.ingest];
     for (const item of ingested) {
-      system(t("chat.ingested", { source: item.source, pages: item.pages, chunks: item.chunks }));
+      addMessage({
+        role: "system",
+        text: t("chat.ingested", { source: item.source, pages: item.pages, chunks: item.chunks }),
+        teach: item.teach || null,
+      });
     }
+    if (teach) playTeach(ingested[0]?.teach);
     showToast(`Indexed ${files.length} PDF(s)`, "success");
+  } catch (err) {
+    if (teach) failTeach(err.message);
+    throw err;
   } finally {
     typing.remove();
   }
@@ -1097,6 +1131,7 @@ function renderGuestChat() {
   for (const m of chat) {
     const msg = { role: m.role || m.type, text: m.text, command: m.command || null };
     if (m.card) msg.card = m.card;
+    if (m.teach) msg.teach = m.teach;
     session.messages.push({ ts: Date.now(), ...msg });
     if (!session.title && msg.role === "user") session.title = msg.text;
   }

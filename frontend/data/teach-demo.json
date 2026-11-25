@@ -1,0 +1,594 @@
+{
+ "_comment": "Sample Teach-mode traces used by the 'Demo' buttons and guest mode. Numbers are illustrative, shaped like a real local run (Ollama, nomic-embed-text).",
+ "ingest": {
+  "kind": "ingest",
+  "total_ms": 6842.3,
+  "meta": {
+   "source": "Sample Proposal - Phase 4",
+   "demo": true
+  },
+  "steps": [
+   {
+    "id": "parse",
+    "ms": 38.4,
+    "data": {
+     "pages": 11,
+     "chars": 19873,
+     "page_chars": [
+      1712,
+      2015,
+      1980,
+      1460,
+      2210,
+      2390,
+      1830,
+      1220,
+      1995,
+      1690,
+      1371
+     ],
+     "first_page": 1,
+     "first_page_text": "Phase 4 Proposal. Prepared for Go Daikin Sdn Bhd. 1. Background. Following the successful delivery of Phase 3, this proposal covers the rollout of the document automation platform to the remaining three regional offices, including data migration, user training and 12 months of support."
+    }
+   },
+   {
+    "id": "tokenize",
+    "ms": 21.7,
+    "data": {
+     "encoding": "cl100k_base",
+     "total_tokens": 4235,
+     "page_tokens": [
+      412,
+      388,
+      455,
+      301,
+      470,
+      512,
+      398,
+      276,
+      433,
+      350,
+      219
+     ],
+     "sample": [
+      [
+       42745,
+       "Phase"
+      ],
+      [
+       20072,
+       " 4"
+      ],
+      [
+       52050,
+       " Proposal."
+      ],
+      [
+       85619,
+       " Prepared"
+      ],
+      [
+       6628,
+       " for"
+      ],
+      [
+       9794,
+       " Go"
+      ],
+      [
+       70539,
+       " Daikin"
+      ],
+      [
+       12637,
+       " Sdn"
+      ],
+      [
+       48231,
+       " Bhd."
+      ],
+      [
+       76687,
+       " 1."
+      ],
+      [
+       7902,
+       " Background."
+      ],
+      [
+       66810,
+       " Following"
+      ],
+      [
+       28440,
+       " the"
+      ],
+      [
+       5214,
+       " successful"
+      ],
+      [
+       11565,
+       " delivery"
+      ],
+      [
+       57138,
+       " of"
+      ],
+      [
+       55110,
+       " Phase"
+      ],
+      [
+       9456,
+       " 3,"
+      ],
+      [
+       31844,
+       " this"
+      ],
+      [
+       12189,
+       " proposal"
+      ],
+      [
+       72526,
+       " covers"
+      ],
+      [
+       55942,
+       " the"
+      ],
+      [
+       8047,
+       " rollout"
+      ],
+      [
+       74415,
+       " of"
+      ],
+      [
+       16526,
+       " the"
+      ],
+      [
+       29560,
+       " document"
+      ],
+      [
+       82957,
+       " automation"
+      ],
+      [
+       82538,
+       " platform"
+      ]
+     ]
+    }
+   },
+   {
+    "id": "chunk",
+    "ms": 4.2,
+    "data": {
+     "strategy": "page",
+     "chunk_size": 700,
+     "chunk_overlap": 120,
+     "count": 12,
+     "chunk_tokens": [
+      412,
+      388,
+      455,
+      301,
+      470,
+      700,
+      232,
+      398,
+      276,
+      433,
+      350,
+      219
+     ],
+     "samples": [
+      {
+       "chunk_id": "Sample Proposal - Phase 4-p0001-c0001",
+       "source": "Sample Proposal - Phase 4",
+       "page": 1,
+       "tokens": 412,
+       "text": "Phase 4 Proposal. Prepared for Go Daikin Sdn Bhd. 1. Background. Following the successful delivery of Phase 3, this proposal covers the rollout of the document automation platform to the remaining three regional office…"
+      },
+      {
+       "chunk_id": "Sample Proposal - Phase 4-p0002-c0001",
+       "source": "Sample Proposal - Phase 4",
+       "page": 2,
+       "tokens": 388,
+       "text": "2. Scope of work. The vendor will configure document capture for purchase orders, invoices and delivery orders, connect the approval workflow to the existing ERP, and migrate 18,000 archived records…"
+      },
+      {
+       "chunk_id": "Sample Proposal - Phase 4-p0009-c0001",
+       "source": "Sample Proposal - Phase 4",
+       "page": 9,
+       "tokens": 433,
+       "text": "7. Commercials. Software licences MYR 162,000. Implementation and migration MYR 72,000. Training MYR 18,000. Support (12 months) MYR 18,000. Subtotal MYR 270,000. SST 8% MYR 21,600. Total MYR 291,600…"
+      }
+     ],
+     "chunk_pages": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+     ]
+    }
+   },
+   {
+    "id": "embed",
+    "ms": 6512.9,
+    "data": {
+     "model": "nomic-embed-text",
+     "count": 12,
+     "dim": 768,
+     "vectors": [
+      {
+       "chunk_id": "Sample Proposal - Phase 4-p0001-c0001",
+       "values": [
+        -0.0139,
+        -0.008,
+        -0.0123,
+        -0.0073,
+        0.0104,
+        0.0565,
+        0.0314,
+        0.0348,
+        -0.0566,
+        -0.0148,
+        -0.0633,
+        -0.0252,
+        0.0467,
+        0.0353,
+        0.0078,
+        0.0188
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "store",
+    "ms": 12.6,
+    "data": {
+     "index_type": "IndexFlatIP",
+     "metric": "inner product on L2-normalized vectors (cosine similarity)",
+     "before": 12,
+     "removed": 0,
+     "added": 12,
+     "total": 24,
+     "documents": 5
+    }
+   }
+  ]
+ },
+ "query": {
+  "kind": "query",
+  "total_ms": 9126.4,
+  "meta": {
+   "demo": true
+  },
+  "steps": [
+   {
+    "id": "question",
+    "ms": 0,
+    "data": {
+     "text": "What is the total budget for the Phase 4 proposal?",
+     "tokens": 12,
+     "sample": [
+      [
+       93637,
+       "What"
+      ],
+      [
+       8529,
+       " is"
+      ],
+      [
+       74272,
+       " the"
+      ],
+      [
+       8112,
+       " total"
+      ],
+      [
+       81434,
+       " budget"
+      ],
+      [
+       27295,
+       " for"
+      ],
+      [
+       65366,
+       " the"
+      ],
+      [
+       89481,
+       " Phase"
+      ],
+      [
+       69993,
+       " 4"
+      ],
+      [
+       56345,
+       " proposal?"
+      ]
+     ]
+    }
+   },
+   {
+    "id": "intent",
+    "ms": 1184.2,
+    "data": {
+     "intent": "qa",
+     "by": "llm",
+     "llm_output": "{\"intent\": \"qa\"}"
+    }
+   },
+   {
+    "id": "embed_query",
+    "ms": 148.3,
+    "data": {
+     "model": "nomic-embed-text",
+     "dim": 768,
+     "vector": [
+      0.0086,
+      -0.0496,
+      0.0378,
+      -0.0197,
+      0.0003,
+      0.0283,
+      0.0035,
+      -0.0183,
+      -0.0163,
+      0.05,
+      -0.0272,
+      0.0409,
+      -0.0136,
+      -0.0111,
+      -0.0269,
+      -0.002
+     ],
+     "calls": 1
+    }
+   },
+   {
+    "id": "search",
+    "ms": 9.8,
+    "data": {
+     "index_total": 23,
+     "hybrid": true,
+     "candidate_k": 20,
+     "top_k": 5,
+     "runs": [
+      {
+       "filter": [],
+       "vector_hits": [
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0009-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 9,
+         "score": 0.7412,
+         "text": "7. Commercials. Software licences MYR 162,000. Implementation and migration MYR 72,000. Training MYR 18,000…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0010-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 10,
+         "score": 0.6825,
+         "text": "8. Payment schedule. 40% on signing, 40% on go-live, 20% after 90 days of support. All amounts include 8% SST…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0001-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 1,
+         "score": 0.6431,
+         "text": "Phase 4 Proposal. Prepared for Go Daikin Sdn Bhd. 1. Background. Following the successful delivery of Phase 3…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0005-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 5,
+         "score": 0.5988,
+         "text": "5. Timeline. Phase 4 runs for 16 weeks starting in January, with the three offices going live in sequence…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0002-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 2,
+         "score": 0.581,
+         "text": "2. Scope of work. The vendor will configure document capture for purchase orders, invoices and delivery orders…"
+        }
+       ],
+       "keyword_hits": [
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0001-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 1,
+         "score": 7.912,
+         "text": "Phase 4 Proposal. Prepared for Go Daikin Sdn Bhd. 1. Background. Following the successful delivery of Phase 3…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0009-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 9,
+         "score": 7.204,
+         "text": "7. Commercials. Software licences MYR 162,000. Implementation and migration MYR 72,000. Training MYR 18,000…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0005-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 5,
+         "score": 4.877,
+         "text": "5. Timeline. Phase 4 runs for 16 weeks starting in January, with the three offices going live in sequence…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0010-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 10,
+         "score": 3.951,
+         "text": "8. Payment schedule. 40% on signing, 40% on go-live, 20% after 90 days of support. All amounts include 8% SST…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0002-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 2,
+         "score": 2.336,
+         "text": "2. Scope of work. The vendor will configure document capture for purchase orders, invoices and delivery orders…"
+        }
+       ],
+       "fused": [
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0009-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 9,
+         "score": 0.0325,
+         "text": "7. Commercials. Software licences MYR 162,000. Implementation and migration MYR 72,000. Training MYR 18,000…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0001-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 1,
+         "score": 0.0323,
+         "text": "Phase 4 Proposal. Prepared for Go Daikin Sdn Bhd. 1. Background. Following the successful delivery of Phase 3…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0010-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 10,
+         "score": 0.0315,
+         "text": "8. Payment schedule. 40% on signing, 40% on go-live, 20% after 90 days of support. All amounts include 8% SST…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0005-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 5,
+         "score": 0.0313,
+         "text": "5. Timeline. Phase 4 runs for 16 weeks starting in January, with the three offices going live in sequence…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0002-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 2,
+         "score": 0.0308,
+         "text": "2. Scope of work. The vendor will configure document capture for purchase orders, invoices and delivery orders…"
+        }
+       ],
+       "final": [
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0009-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 9,
+         "score": 0.8407,
+         "text": "7. Commercials. Software licences MYR 162,000. Implementation and migration MYR 72,000. Training MYR 18,000…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0001-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 1,
+         "score": 0.8064,
+         "text": "Phase 4 Proposal. Prepared for Go Daikin Sdn Bhd. 1. Background. Following the successful delivery of Phase 3…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0010-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 10,
+         "score": 0.6732,
+         "text": "8. Payment schedule. 40% on signing, 40% on go-live, 20% after 90 days of support. All amounts include 8% SST…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0005-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 5,
+         "score": 0.6731,
+         "text": "5. Timeline. Phase 4 runs for 16 weeks starting in January, with the three offices going live in sequence…"
+        },
+        {
+         "chunk_id": "Sample Proposal - Phase 4-p0002-c0001",
+         "source": "Sample Proposal - Phase 4",
+         "page": 2,
+         "score": 0.4031,
+         "text": "2. Scope of work. The vendor will configure document capture for purchase orders, invoices and delivery orders…"
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "prompt",
+    "ms": 0,
+    "data": {
+     "system": "You are a helpful RAG assistant. Answer only from the provided context. If context is insufficient, say you are not sure.",
+     "prompt": "Question:\nWhat is the total budget for the Phase 4 proposal?\n\nContext:\n[1] source=Sample Proposal - Phase 4 page=9 score=0.8407\n7. Commercials. Software licences MYR 162,000. Implementation and migration MYR 72,000. Training MYR 18,000. Support (12 months) MYR 18,000. Subtotal MYR 270,000. SST 8% MYR 21,600. Total MYR 291,600.\n\n[2] source=Sample Proposal - Phase 4 page=1 score=0.8064\nPhase 4 Proposal. Prepared for Go Daikin Sdn Bhd…",
+     "prompt_chars": 2964,
+     "prompt_tokens": 812,
+     "chunks": 5
+    }
+   },
+   {
+    "id": "generate",
+    "ms": 7783.6,
+    "data": {
+     "model": "llama3.1:8b",
+     "completion_tokens": 46,
+     "output": "The total cost for the Phase 4 proposal is MYR 291,600, which includes an 8% SST of MYR 21,600 on a subtotal of MYR 270,000 (page 9)."
+    }
+   },
+   {
+    "id": "answer",
+    "ms": 0,
+    "data": {
+     "citations": [
+      {
+       "document": "Sample Proposal - Phase 4",
+       "page": 9,
+       "chunk_id": "Sample Proposal - Phase 4-p0009-c0001",
+       "score": 0.8407
+      },
+      {
+       "document": "Sample Proposal - Phase 4",
+       "page": 1,
+       "chunk_id": "Sample Proposal - Phase 4-p0001-c0001",
+       "score": 0.8064
+      },
+      {
+       "document": "Sample Proposal - Phase 4",
+       "page": 10,
+       "chunk_id": "Sample Proposal - Phase 4-p0010-c0001",
+       "score": 0.6732
+      },
+      {
+       "document": "Sample Proposal - Phase 4",
+       "page": 5,
+       "chunk_id": "Sample Proposal - Phase 4-p0005-c0001",
+       "score": 0.6731
+      },
+      {
+       "document": "Sample Proposal - Phase 4",
+       "page": 2,
+       "chunk_id": "Sample Proposal - Phase 4-p0002-c0001",
+       "score": 0.4031
+      }
+     ],
+     "confidence": 0.6793
+    }
+   }
+  ]
+ }
+}

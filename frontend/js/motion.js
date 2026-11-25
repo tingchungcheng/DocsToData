@@ -137,3 +137,8 @@ export function countUp(el, to, format) {
     },
   });
 }
+
+/** GSAP when animations are allowed, else null (Teach mode builds its own timelines). */
+export function getGsap() {
+  return gsap();
+}

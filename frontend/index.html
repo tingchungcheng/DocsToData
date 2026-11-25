@@ -111,10 +111,16 @@
                   <h1 class="chat-title" id="chatTitle">New chat</h1>
                   <span class="chat-meta" id="chatMeta"></span>
                 </div>
-                <button id="documentsBtn" class="documents-btn" type="button" title="Choose which PDFs the chat uses">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /></svg>
-                  <span id="documentsBtnLabel">PDFs (0)</span>
-                </button>
+                <div class="chat-header-actions">
+                  <button id="teachToggle" class="teach-toggle" type="button" aria-pressed="false" aria-controls="teachPanel" title="Teach mode: replay what happens under the hood">
+                    <span class="teach-switch" aria-hidden="true"><span class="teach-switch-knob"></span></span>
+                    <span data-i18n="chat.teach">Teach</span>
+                  </button>
+                  <button id="documentsBtn" class="documents-btn" type="button" title="Choose which PDFs the chat uses">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /></svg>
+                    <span id="documentsBtnLabel">PDFs (0)</span>
+                  </button>
+                </div>
               </header>
 
               <div class="chat-scroll" id="chatScroll">
@@ -172,6 +178,28 @@
                 <input id="fileInput" type="file" accept=".pdf" multiple hidden />
               </div>
             </div>
+            <aside class="teach-panel" id="teachPanel" hidden aria-label="Teach mode">
+              <header class="teach-head">
+                <div class="teach-head-title">
+                  <h2 data-i18n="teach.title">Under the hood</h2>
+                  <span class="teach-kind" id="teachKind"></span>
+                </div>
+                <div class="teach-head-actions">
+                  <button id="teachReplay" class="teach-icon-btn" type="button" title="Replay" aria-label="Replay" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" /></svg>
+                  </button>
+                  <button id="teachSkip" class="teach-icon-btn" type="button" title="Show all steps now" aria-label="Show all steps now" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l7 7-7 7M13 5l7 7-7 7" /></svg>
+                  </button>
+                  <button id="teachClose" class="teach-icon-btn" type="button" title="Turn off Teach mode" aria-label="Turn off Teach mode">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                  </button>
+                </div>
+              </header>
+              <ol class="teach-rail" id="teachRail"></ol>
+              <p class="teach-status" id="teachStatus" aria-live="polite"></p>
+              <div class="teach-stage" id="teachStage"></div>
+            </aside>
           </section>
 
           <!-- History ------------------------------------------------- -->
