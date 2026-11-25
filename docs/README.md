@@ -1,6 +1,19 @@
-# Go Invoice
+# DocsToData
 
-Python-first RAG starter using OpenAI + FAISS, plus local Ollama + FAISS.
+Local-first document agent: chat with your quotations, purchase orders and invoices, then save the results as files on your own computer. Python RAG with FAISS, running on Ollama by default (OpenAI optional).
+
+## Chat tools
+
+Type `#` in the chat to pick a tool:
+
+- `#ask`: ask a question about the selected PDFs (the default).
+- `#compare`: compare quotations and say which vendor is better, and why.
+- `#extract`: pull fields and line items out of a PO or invoice.
+- `#summarize`: build a summary report you can download.
+- `#plan`: a step-by-step plan that uses the documents.
+- `#action`: save the latest result to a local folder.
+
+Results are saved under `DOCS_WORKSPACE_DIR` (default `data/workspace`), in a folder per document type that you can rename in Settings, e.g. `Invoices/2026-11/INV-20931.json`. Chats are kept in your browser and shown in History.
 
 ## Quick start
 

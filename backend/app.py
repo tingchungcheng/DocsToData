@@ -25,6 +25,7 @@ from backend.auth import (
     sign_up,
 )
 from backend.runtime_paths import app_data_dir, is_lambda
+from backend import workspace
 from rag.evaluation import compute_retrieval_metrics, judge_generation
 from rag.pipeline import RagPipeline
 from rag.pricing import estimate_chat_cost_usd, is_free_provider
@@ -236,7 +237,7 @@ class QueryRequest(BaseModel):
     source_filter: list[str] | None = None
 
 
-app = FastAPI(title="Go Invoice API", version="0.1.0")
+app = FastAPI(title="DocsToData API", version="0.2.0")
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 # On Lambda, only /tmp is writable, so uploads land under /tmp/data/uploads
@@ -400,6 +401,40 @@ def auth_logout(authorization: str | None = Header(default=None)) -> dict[str, o
         raise HTTPException(status_code=401, detail="Missing bearer token")
     sign_out(authorization.split(" ", 1)[1].strip())
     return {"status": "ok"}
+
+
+class WorkspaceSaveRequest(BaseModel):
+    """Save a chat result (extraction, comparison, summary) to the local workspace.
+
+    English: Local-first replacement for saving into an S3 folder. `folder`
+    is relative to the workspace root, e.g. "Invoices/2026-11".
+    中文: 取代「存到 S3 資料夾」的本機優先做法。`folder` 是相對於工作區根目錄
+    的路徑，例如 "Invoices/2026-11"。
+    """
+
+    folder: str = Field(default="", max_length=300)
+    filename: str = Field(min_length=1, max_length=200)
+    content: str
+
+
+@app.get("/workspace")
+def workspace_info(user: dict[str, Any] = Depends(get_current_user)) -> dict[str, object]:
+    root = workspace.workspace_root(BASE_DIR)
+    return {"root": str(root), "files": workspace.list_files(root)}
+
+
+@app.post("/workspace/save")
+def workspace_save(req: WorkspaceSaveRequest, user: dict[str, Any] = Depends(get_current_user)) -> dict[str, object]:
+    root = workspace.workspace_root(BASE_DIR)
+    try:
+        saved = workspace.save_file(root, req.folder, req.filename, req.content)
+    except workspace.WorkspaceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "status": "ok",
+        "path": saved.relative_to(root).as_posix(),
+        "absolute_path": str(saved),
+    }
 
 
 @app.post("/ingest")

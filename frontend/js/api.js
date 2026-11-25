@@ -23,6 +23,11 @@ async function doFetch(path, options, token) {
   return { res, data };
 }
 
+/** Tell the app a request needs sign-in; main.js routes to the login panel. */
+export function notifyAuthRequired() {
+  window.dispatchEvent(new CustomEvent("d2d:auth-required"));
+}
+
 export async function apiFetch(path, options = {}) {
   const token = await getValidAccessToken();
   let { res, data } = await doFetch(path, options, token);
@@ -32,6 +37,13 @@ export async function apiFetch(path, options = {}) {
     if (refreshed) {
       ({ res, data } = await doFetch(path, options, refreshed));
     }
+  }
+
+  if (res.status === 401) {
+    // Not signed in (or the session can't be refreshed): send the user to
+    // the sign-in panel instead of surfacing "Missing bearer token".
+    notifyAuthRequired();
+    throw new ApiError("Please sign in to continue.", 401);
   }
 
   if (!res.ok) {
