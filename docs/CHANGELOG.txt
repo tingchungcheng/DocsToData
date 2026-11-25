@@ -1,6 +1,30 @@
 DocsToData - Change Log
 ========================================================================
 
+Phase 1b · Teach mode (see what happens under the hood)
+------------------------------------------------------------------------
+- New "Teach" switch in the chat header opens an "Under the hood" panel.
+  After you upload a PDF or ask a question, it replays each pipeline step
+  with animation, a plain-language explanation and the real data from
+  that run:
+    upload:   read PDF -> tokenize -> chunk (with overlap) -> embed -> FAISS
+    question: question tokens -> route (intent) -> embed question ->
+              hybrid search (vector + BM25 -> RRF -> rerank) -> prompt ->
+              model writes the answer -> citations + confidence
+- Backend: /ingest, /ingest-upload and /query accept `teach: true` and
+  then add a small `teach` trace to the normal response (rag/teach_trace.py).
+  The trace holds timings and capped samples only (a few chunks, the first
+  16 numbers of a vector, top hits), so it stays a few KB. Nothing changes
+  when `teach` is off.
+- "How this worked" on answers and uploads replays that run later. Demo
+  traces (frontend/data/teach-demo.json) back the panel's demo buttons and
+  guest mode.
+- Animations honor the Settings animations switch and reduced motion; the
+  step-by-step reveal still works without them. Panel text is English only
+  for now.
+
+========================================================================
+
 Phase 1 · Chat-first UI revamp (local-first)
 ------------------------------------------------------------------------
 - Renamed the app back to DocsToData and rebuilt the shell: a sidebar

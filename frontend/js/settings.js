@@ -28,6 +28,7 @@ const DEFAULTS = {
   company: "",
   theme: "system",
   motion: true,
+  teach: false,
   folders: {
     quotation: "Quotations",
     po: "Purchase Orders",

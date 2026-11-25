@@ -13,6 +13,7 @@ import { initSettings, onSettingsChange, showSettingsTab } from "./settings.js";
 import { isGuest } from "./guest.js";
 import { currentProvider, onProviderChange } from "./state.js";
 import { showToast } from "./toast.js";
+import { initTeach } from "./teach.js";
 import { activateUploadRag, initUploadRag, newChat } from "./uploadRag.js";
 
 function updateLocalBadge() {
@@ -30,6 +31,7 @@ async function bootstrap() {
   await initAuthView();
 
   initUploadRag();
+  initTeach();
   initHistory();
   initLibrary();
   initEvaluation();

@@ -220,6 +220,7 @@ class IngestRequest(BaseModel):
     out_dir: str | None = None
     chunk_size: int = 700
     chunk_overlap: int = 120
+    teach: bool = False
 
 
 class QueryRequest(BaseModel):
@@ -235,6 +236,7 @@ class QueryRequest(BaseModel):
     top_k: int = 5
     intent: Literal["summarize", "qa", "compare"] | None = None
     source_filter: list[str] | None = None
+    teach: bool = False
 
 
 app = FastAPI(title="DocsToData API", version="0.2.0")
@@ -449,6 +451,7 @@ def ingest(req: IngestRequest, user: dict[str, Any] = Depends(get_current_user))
                 out_dir=index_dir,
                 chunk_size=req.chunk_size,
                 chunk_overlap=req.chunk_overlap,
+                teach=req.teach,
             )
             _sync_index_to_gcs(index_dir=index_dir, provider="openai")
             return {"status": "ok", "provider": "openai", "ingest": stats}
@@ -460,6 +463,7 @@ def ingest(req: IngestRequest, user: dict[str, Any] = Depends(get_current_user))
             out_dir=index_dir,
             chunk_size=req.chunk_size,
             chunk_overlap=req.chunk_overlap,
+            teach=req.teach,
         )
         _sync_index_to_gcs(index_dir=index_dir, provider="ollama")
         return {"status": "ok", "provider": "ollama", "ingest": stats}
@@ -579,6 +583,7 @@ def query(req: QueryRequest, user: dict[str, Any] = Depends(get_current_user)) -
                 top_k=req.top_k,
                 intent=req.intent,
                 source_filter=req.source_filter,
+                teach=req.teach,
             )
             return {"status": "ok", "provider": "openai", **result}
 
@@ -591,6 +596,7 @@ def query(req: QueryRequest, user: dict[str, Any] = Depends(get_current_user)) -
             top_k=req.top_k,
             intent=req.intent,
             source_filter=req.source_filter,
+            teach=req.teach,
         )
         return {"status": "ok", "provider": "ollama", **result}
     except FileNotFoundError:
@@ -612,6 +618,7 @@ def ingest_upload(
     out_dir: str | None = Form(default=None),
     chunk_size: int = Form(default=700),
     chunk_overlap: int = Form(default=120),
+    teach: bool = Form(default=False),
     user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, object]:
     """Upload one or more PDFs via browser and ingest them into the shared index.
@@ -656,6 +663,7 @@ def ingest_upload(
                 out_dir=index_dir,
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap,
+                teach=teach,
             )
             ingested.append(stats)
 
