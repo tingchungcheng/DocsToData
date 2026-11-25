@@ -553,7 +553,10 @@ def delete_document(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="No index found for this provider") from None
 
-    removed = store.remove_source(source)
+    try:
+        removed = store.remove_source(source)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if removed == 0:
         raise HTTPException(status_code=404, detail=f"No document named '{source}' found")
 

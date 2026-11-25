@@ -86,6 +86,11 @@ class FaissStore:
 
         if not self.chunks:
             return 0
+        if self._embeddings is not None and len(self._embeddings) != len(self.chunks):
+            raise ValueError(
+                f"index is out of sync: {len(self.chunks)} chunks but {len(self._embeddings)} vectors. "
+                "Re-ingest the PDFs to rebuild it."
+            )
 
         keep_indices = [i for i, chunk in enumerate(self.chunks) if chunk.source != source]
         removed = len(self.chunks) - len(keep_indices)
@@ -162,13 +167,22 @@ class FaissStore:
         if not (path / "chunks.json").exists():
             raise FileNotFoundError(f"Missing chunks metadata at {(path / 'chunks.json')}")
 
-        store = cls(dim=dim)
-        store.index = faiss.read_index(str(path / "index.faiss"))
+        index = faiss.read_index(str(path / "index.faiss"))
+        # Trust the dimension stored in the index over the configured one: an
+        # index built with a different embedding model (e.g. 1024-d vs the
+        # 768-d default) would otherwise crash FAISS on rebuild/delete.
+        store = cls(dim=index.d)
+        store.index = index
         with (path / "chunks.json").open("r", encoding="utf-8") as f:
             raw_chunks = json.load(f)
         store.chunks = [Chunk(**item) for item in raw_chunks]
 
         embeddings_path = path / "embeddings.npy"
-        if embeddings_path.exists():
-            store._embeddings = np.load(embeddings_path)
+        embeddings = np.load(embeddings_path) if embeddings_path.exists() else None
+        if embeddings is None or len(embeddings) != index.ntotal or embeddings.shape[1] != index.d:
+            # Missing or stale embeddings.npy (older indexes): recover the
+            # vectors from the flat index itself so delete/rebuild keeps the
+            # right vectors instead of dropping or mismatching them.
+            embeddings = index.reconstruct_n(0, index.ntotal) if index.ntotal else None
+        store._embeddings = embeddings
         return store
