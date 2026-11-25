@@ -10,7 +10,7 @@
   "ragChat": [
     { "type": "system", "text": "Guest preview: this is sample data. Sign in to upload your own PDFs and ask real questions." },
     { "type": "user", "text": "What is the total budget for the Phase 4 proposal?" },
-    { "type": "bot", "text": "The total cost for the Phase 4 proposal is MYR 291,600, which includes an 8% SST of MYR 21,600. This is illustrative sample data. [qa]" },
+    { "type": "bot", "text": "The total cost for the Phase 4 proposal is MYR 291,600, which includes an 8% SST of MYR 21,600. This is illustrative sample data. [qa]", "teach": "demo:query" },
     { "type": "user", "text": "Summarize the Bitrise quotation." },
     { "type": "bot", "text": "The Bitrise quotation (ref 2512/001) covers a 12-month CI/CD subscription at MYR 585/month, totalling MYR 7,581.60 incl. SST. Sample data for preview only. [summarize]" }
   ],
