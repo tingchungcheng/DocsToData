@@ -15,7 +15,7 @@
 // The module keeps the export names the rest of the app already uses
 // (initUploadRag, activateUploadRag, clearUploadRag, refreshDocuments).
 
-import { api, ApiError } from "./api.js";
+import { api, ApiError, notifyAuthRequired } from "./api.js";
 import { getAccessToken } from "./auth.js";
 import { COMMANDS, DOC_TYPES, findCommand, guessDocType, parseCommand, parseJsonAnswer } from "./commands.js";
 import { API_BASE_URL } from "./config.js";
@@ -805,8 +805,10 @@ async function submit() {
   try {
     await runTool(cmd, text);
   } catch (err) {
-    system(`Error: ${err.message}`);
-    showToast(err.message, "error");
+    if (!(err instanceof ApiError && err.status === 401)) {
+      system(`Error: ${err.message}`);
+      showToast(err.message, "error");
+    }
   } finally {
     busy = false;
     sendBtn.disabled = false;
@@ -842,6 +844,10 @@ async function ingestFiles(fileList) {
       body: form,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
+    if (res.status === 401) {
+      notifyAuthRequired();
+      throw new ApiError("Please sign in to continue.", 401);
+    }
     const json = await res.json();
     if (!res.ok) throw new Error(json.detail || "Ingest failed");
     const ingested = Array.isArray(json.ingest) ? json.ingest : [json.ingest];
@@ -1029,8 +1035,10 @@ export function initUploadRag() {
     try {
       await ingestFiles(files);
     } catch (err) {
-      system(`Error: ${err.message}`);
-      showToast(err.message, "error");
+      if (!(err instanceof ApiError && err.status === 401)) {
+        system(`Error: ${err.message}`);
+        showToast(err.message, "error");
+      }
     } finally {
       fileInput.value = "";
     }

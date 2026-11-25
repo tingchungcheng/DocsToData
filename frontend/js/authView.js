@@ -5,6 +5,7 @@ import {
   confirmSignUp,
   fetchAuthConfig,
   fetchCurrentUser,
+  isAuthEnabled,
   isSignedIn,
   resendConfirmationCode,
   getIdentityFromIdToken,
@@ -16,7 +17,7 @@ import {
 import { clearEvaluation } from "./evaluation.js";
 import { enterGuestMode, exitGuestMode, isGuest } from "./guest.js";
 import { clearLibrary } from "./library.js";
-import { goToView } from "./nav.js";
+import { consumePendingView, goToView } from "./nav.js";
 import { showToast } from "./toast.js";
 import { clearUploadRag } from "./uploadRag.js";
 
@@ -180,6 +181,7 @@ export async function initAuthView() {
       loginForm.reset();
       showToast("Signed in successfully", "success");
       await refreshAuthUi();
+      goToView(consumePendingView() || "rag");
     } catch (err) {
       showToast(err.message || "Sign-in failed", "error");
     }
@@ -283,6 +285,7 @@ export async function initAuthView() {
     guestBanner.classList.add("hidden");
     signOutBtn.textContent = "Sign out";
     await refreshAuthUi();
+    if (isAuthEnabled()) goToView("auth");
   };
   signOutBtn.addEventListener("click", doSignOut);
   topbarSignOutBtn.addEventListener("click", doSignOut);

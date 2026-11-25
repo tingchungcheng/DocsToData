@@ -13,8 +13,30 @@ const scrim = document.getElementById("sidebarScrim");
 const ALIASES = { auth: "settings" };
 const listeners = new Set();
 let current = null;
+let guard = null;
+let pendingView = null;
+
+/**
+ * Register a check run before every view switch. When it returns true for a
+ * view, the user is sent to the sign-in panel instead, and the view they
+ * wanted is remembered so sign-in can take them back to it.
+ */
+export function setNavGuard(fn) {
+  guard = fn;
+}
+
+/** The view a signed-out user tried to open, cleared once read. */
+export function consumePendingView() {
+  const view = pendingView;
+  pendingView = null;
+  return view;
+}
 
 function activateView(requested) {
+  if (guard && guard(ALIASES[requested] || requested)) {
+    pendingView = ALIASES[requested] || requested;
+    requested = "auth";
+  }
   const viewName = ALIASES[requested] || requested;
   const changed = viewName !== current;
   current = viewName;
