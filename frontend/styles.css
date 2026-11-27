@@ -3867,7 +3867,9 @@ select {
   .teach-spinner {
     animation: none;
   }
+}
 
+/* ---------------------------------------------------------------------- */
 /* PDF scope picker: same neutral surfaces + single accent as the rest    */
 /* ---------------------------------------------------------------------- */
 
@@ -3922,6 +3924,12 @@ select {
 
 .documents-name {
   color: var(--color-text);
+  font-weight: 400;
+}
+
+.documents-item-label.is-selected .documents-name {
+  color: var(--color-primary-dark);
+  font-weight: 600;
 }
 
 .doc-type-select {
