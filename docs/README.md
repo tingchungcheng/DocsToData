@@ -1,8 +1,36 @@
 # DocsToData
 
-Local-first document agent: chat with your quotations, purchase orders and invoices, then save the results as files on your own computer. Python RAG with FAISS, running on Ollama by default (OpenAI optional).
+DocsToData lets you chat with your PDFs (quotations, purchase orders, invoices) and save the answers as files on your own computer. It runs on your machine with local Ollama models by default. OpenAI is optional.
 
-## Chat tools
+## Quick start
+
+From the project folder, run:
+
+```bash
+./start.sh
+```
+
+Then use the app at **http://localhost:8000/** (the script opens it for you). Press Ctrl+C to stop.
+
+The script sets up whatever is missing and skips anything already done, so you can run it every time:
+
+1. Creates a Python virtual environment in `.venv` (needs Python 3.10 or newer).
+2. Installs the packages in `requirements.txt`.
+3. Copies `.env.example` to `.env` if you don't have a `.env` yet.
+4. Installs Tesseract, used to read scanned PDFs (macOS, with Homebrew).
+5. Installs and starts Ollama, then downloads the models named in `.env` (can be several GB the first time). Skipped when `DISABLE_OLLAMA=true`.
+6. Starts the app.
+
+Options:
+
+| Command | What it does |
+| --- | --- |
+| `./start.sh --check` | Only shows what is installed or missing. Changes nothing. |
+| `./start.sh --docker` | Runs the app in Docker instead, at http://localhost:8080/ |
+| `PORT=9000 ./start.sh` | Uses another port. |
+| `NO_BROWSER=1 ./start.sh` | Doesn't open the browser. |
+
+## Using the app
 
 Type `#` in the chat to pick a tool:
 
@@ -13,190 +41,194 @@ Type `#` in the chat to pick a tool:
 - `#plan`: a step-by-step plan that uses the documents.
 - `#action`: save the latest result to a local folder.
 
-Results are saved under `DOCS_WORKSPACE_DIR` (default `data/workspace`), in a folder per document type that you can rename in Settings, e.g. `Invoices/2026-11/INV-20931.json`. Chats are kept in your browser and shown in History.
+Results are saved under `DOCS_WORKSPACE_DIR` (default `data/workspace`), in one folder per document type, e.g. `Invoices/2026-11/INV-20931.json`. You can rename these folders in Settings. Chats are kept in your browser and shown in History.
 
-## Quick start
+The top bar has four sections:
 
-1. Create virtual environment and install deps:
-   - `python3 -m venv .venv`
-   - `source .venv/bin/activate`
-   - `pip install -r requirements.txt`
-2. Configure environment:
-   - `cp .env.example .env`
-   - edit `.env` and set `OPENAI_API_KEY` (for cloud flow)
-3. Ingest a PDF:
-   - `python -m rag.cli ingest --pdf "path/to/file.pdf"`
-   - sample: 'python -m rag.cli ingest --pdf "/Users/tingcccc/Desktop/all those paperworks/Go Daikin Phase 4/Go Daikin Phase 4 Proposal (DMSS + DAMA) - 1.4.pdf"'
-4. Ask a question:
-   - `python -m rag.cli query --question "What is this document about?"`
+- **Upload & RAG**: the chat. `+` uploads PDFs, Enter asks a question, Summarize builds a report. The provider menu (top right) switches between `ollama` and `openai` for the whole app.
+- **Evaluation Dashboard**: save test questions, run them, mark each answer pass or fail, and see the pass rate and speed. Saved in `data/eval_cases.json` and `data/eval_history.json`.
+- **Document Library**: see the indexed PDFs with page and chunk counts, and delete one from the index.
+- **Account**: sign in and out. Login is off until Cognito is set up (see [Sign-in](#sign-in-aws-cognito-optional)).
 
-## Local Ollama flow
+**Guest preview:** on the Account screen, **Continue as guest** fills every screen with sample data from `frontend/data/guest-data.json`. Guest mode never calls the backend, so uploading, asking, running evaluations and saving are turned off. Refreshing the page ends guest mode.
 
-1. Make sure Ollama is running and models exist:
-   - `ollama list`
-2. (Optional) tune local model config in `.env`:
-   - `OLLAMA_CHAT_MODEL=llama3.1:8b`
-   - `OLLAMA_EMBED_MODEL=nomic-embed-text:latest`
-   - `OLLAMA_VECTOR_DIM=768`
-3. Ingest with local embedding model:
-   - `python -m rag_local.cli ingest --pdf "path/to/file.pdf"`
-   - sample: 'python -m rag_local.cli ingest --pdf "/Users/tingcccc/Desktop/all those paperworks/Go Daikin Phase 4/Go Daikin Phase 4 Proposal (DMSS + DAMA) - 1.4.pdf"'
-4. Query with local chat model:
-   - `python -m rag_local.cli query --question "What is this document about?"`
+## Settings (`.env`)
 
-## FastAPI backend (localhost)
+All settings live in `.env`. `.env.example` lists them all with comments. The main ones:
 
-1. Start server:
-   - `uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000`
-2. Health check:
-   - `GET http://localhost:8000/health`
-3. Swagger docs:
-   - `http://localhost:8000/docs`
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `OLLAMA_CHAT_MODEL` | `qwen3.5:9b` | Local model that writes answers. |
+| `OLLAMA_EMBED_MODEL` | `nomic-embed-text:latest` | Local model for search. |
+| `OLLAMA_VECTOR_DIM` | `768` | Must match the embedding model. |
+| `OLLAMA_THINK` | `false` | Thinking mode for qwen3.x models. `false` is much faster. Also `true` or `auto`. |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Where Ollama runs. |
+| `OPENAI_API_KEY` | empty | Needed only to use OpenAI. |
+| `OPENAI_CHAT_MODEL` / `OPENAI_EMBED_MODEL` | `gpt-4o-mini` / `text-embedding-3-small` | OpenAI models. |
+| `DISABLE_OLLAMA` | `false` | `true` = OpenAI only (used on Cloud Run). |
+| `OCR_ENABLED` | `true` | Read scanned or image-only PDF pages with Tesseract. If Tesseract is missing, those pages are skipped and a warning is logged. |
+| `OCR_LANGUAGE` | `eng` | OCR languages, joined with `+`, e.g. `eng+chi_tra`. Extra languages on macOS: `brew install tesseract-lang`. |
+| `DOCS_WORKSPACE_DIR` | `data/workspace` | Where saved results go. Any folder works, e.g. `~/Documents/DocsToData`. |
+| `CORS_ALLOW_ORIGINS` | `*` | Allowed origins. `*` is fine locally. |
+| `GCS_BUCKET` / `GCS_PREFIX` | empty / `go-invoice` | Optional Google Cloud Storage backup (see [Cloud Run](#google-cloud-run)). |
+| `COGNITO_*` | empty | Optional sign-in (see [Sign-in](#sign-in-aws-cognito-optional)). |
 
-### Example API requests (Postman)
+Restart the app after changing `.env`.
 
-- `POST http://localhost:8000/ingest`
-```json
-{
-  "provider": "ollama",
-  "pdf_path": "/Users/tingcccc/Desktop/all those paperworks/Go Daikin Phase 4/Go Daikin Phase 4 Proposal (DMSS + DAMA) - 1.4.pdf"
-}
+## Manual setup (without the script)
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # then edit .env
 ```
 
-- `POST http://localhost:8000/query`
-```json
-{
-  "provider": "ollama",
-  "question": "What is this document about?"
-}
+For local models, make sure Ollama is running and the models exist: `ollama list`.
+
+Start the app (web UI and API together):
+
+```bash
+uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Use `"provider": "openai"` to run the OpenAI pipeline instead.
+- Web UI: http://localhost:8000/
+- Health check: http://localhost:8000/health
+- API docs: http://localhost:8000/docs
 
-## Web UI
+### Command line
 
-- Start backend:
-  - `uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000`
-- Open:
-  - `http://localhost:8000/`
+Add a PDF and ask about it without the UI:
 
-The UI has a top navigation bar with four sections:
+```bash
+# OpenAI
+python -m rag.cli ingest --pdf "path/to/file.pdf"
+python -m rag.cli query --question "What is this document about?"
 
-- **Upload & RAG** — the original chat flow. `+` uploads PDFs (`/ingest-upload`), Send/Enter asks a question (`/query`), Summarize builds an exportable report. Provider dropdown (top right) switches `ollama` / `openai` for the whole app.
-- **Evaluation Dashboard** — save reusable test questions, run them against the live pipeline, grade each answer pass/fail, and see aggregate pass rate / latency. Backed by `/evaluate/*` endpoints, persisted to `data/eval_cases.json` and `data/eval_history.json`.
-- **Document Library** — browse indexed PDFs per provider with page/chunk counts and delete a document from the index. Backed by `/documents/details` and `DELETE /documents/{provider}/{source}`.
-- **Account** — sign in/out via AWS Cognito (see below). Runs in an open "dev mode" until Cognito is configured.
+# Ollama (local, no API key)
+python -m rag_local.cli ingest --pdf "path/to/file.pdf"
+python -m rag_local.cli query --question "What is this document about?"
+```
 
-### AWS Cognito authentication setup
+### API examples
 
-Authentication is optional and off by default (dev mode: every request is treated as a local dev user). To require sign-in:
+`POST http://localhost:8000/ingest`
 
-1. In the AWS Console, create a **Cognito User Pool** (or reuse an existing one).
-   - Enable the **Hosted UI** and add an **App client** (public client, no client secret — this app uses PKCE).
-   - Under the app client's Hosted UI settings, set the **Allowed callback URLs** and **Allowed sign-out URLs** to your app's URL, e.g. `http://localhost:8000/` for local dev and your real domain in production.
-   - Enable the **Authorization code grant** flow with scopes `openid email profile`.
-   - (Optional) Add a SAML/OIDC identity provider under "Sign-in experience" for enterprise SSO, then set `COGNITO_SSO_PROVIDER` to its name to enable the "Continue with SSO" button.
-   - Pick a **Cognito domain** (Hosted UI domain) under "App integration".
-2. Set these in `.env`:
-   - `COGNITO_REGION=us-east-1` (your pool's region)
-   - `COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx`
-   - `COGNITO_CLIENT_ID=<app client id>`
-   - `COGNITO_DOMAIN=https://your-app.auth.us-east-1.amazoncognito.com`
-   - `COGNITO_SSO_PROVIDER=` (optional, e.g. `MyCompanySSO`)
-3. Restart the backend. Once all three of `COGNITO_REGION` / `COGNITO_USER_POOL_ID` / `COGNITO_CLIENT_ID` are set, every API route (`/ingest`, `/ingest-upload`, `/query`, `/documents*`, `/evaluate/*`) requires a valid Cognito access token, and the frontend automatically shows the sign-in screen.
+```json
+{ "provider": "ollama", "pdf_path": "/path/to/file.pdf" }
+```
 
-How it works (classic email/password flow): the in-app form posts the email + password to the backend (`POST /auth/login`), which calls Cognito's `InitiateAuth` (`USER_PASSWORD_AUTH`) server-side via boto3 and returns the access / id / refresh tokens. The frontend stores them in `sessionStorage` and sends the access token as `Authorization: Bearer <token>` on every API call. When the access token nears expiry (or a call returns 401), the frontend calls `POST /auth/refresh` with the refresh token to get a new access token transparently. Sign-up (`POST /auth/signup` + emailed code -> `POST /auth/confirm-signup`) and sign-out (`POST /auth/logout` -> Cognito `GlobalSignOut`) go through the same backend. The backend (`backend/auth.py`) still verifies every access token's signature against the user pool's JWKS and checks `token_use=access` and `client_id` match. The Hosted UI redirect (Authorization Code + PKCE) remains available for enterprise SSO via the optional "Continue with SSO" button.
+`POST http://localhost:8000/query`
 
-Because the app client uses `ALLOW_USER_PASSWORD_AUTH`, enable that flow on the app client if you create the pool manually (SAM/`template.yaml` sets it automatically). Cognito access tokens do not carry the `email` claim; the frontend reads it from the id token for display only.
+```json
+{ "provider": "ollama", "question": "What is this document about?" }
+```
 
-## Deploy to Google Cloud Run (OpenAI + API key)
+Use `"provider": "openai"` for OpenAI. Other routes: `/ingest-upload` (file upload), `/documents/details`, `DELETE /documents/{provider}/{source}`, `/evaluate/*`.
 
-Ollama does not run inside this container by default. For cloud, use **OpenAI** (`provider: "openai"`) and store `OPENAI_API_KEY` in **Secret Manager**, then wire it as an environment variable on the service.
+## Sign-in (AWS Cognito, optional)
 
-1. Build and push an image (replace `PROJECT_ID` and region):
-   - `gcloud auth configure-docker`
-   - `docker build -t gcr.io/PROJECT_ID/go-invoice:latest .`
-   - `docker push gcr.io/PROJECT_ID/go-invoice:latest`
-2. Create a secret for the API key (one-time):
-   - `echo -n 'sk-...' | gcloud secrets create openai-api-key --data-file=-`
-3. Deploy to Cloud Run:
-   - `gcloud run deploy go-invoice --image gcr.io/PROJECT_ID/go-invoice:latest --region us-central1 --allow-unauthenticated --set-env-vars DISABLE_OLLAMA=true --set-secrets OPENAI_API_KEY=openai-api-key:latest`
-4. Open the service URL; use the UI with **OpenAI** selected, or call `/ingest` and `/query` with `"provider": "openai"`.
+Sign-in is off by default: every request is treated as a local user. To require sign-in:
 
-Note: `--allow-unauthenticated` only controls whether Cloud Run's own IAM layer gates *inbound requests to the service*. It is independent of the app-level Cognito login above — if you configure Cognito env vars, the app itself will still require a valid Cognito token on every API call even though Cloud Run lets the request through.
+1. In the AWS Console, create a **Cognito User Pool** (or reuse one).
+   - Add an **App client**: public, no client secret, with the `ALLOW_USER_PASSWORD_AUTH` flow turned on (`template.yaml` does this for you).
+   - Turn on the **Hosted UI**. Set **Allowed callback URLs** and **Allowed sign-out URLs** to your app's URL, e.g. `http://localhost:8000/` locally.
+   - Turn on the **Authorization code grant** with scopes `openid email profile`.
+   - Pick a **Cognito domain** under "App integration".
+   - Optional: add a SAML/OIDC identity provider under "Sign-in experience" for company SSO.
+2. Set in `.env`:
+   ```
+   COGNITO_REGION=us-east-1
+   COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+   COGNITO_CLIENT_ID=<app client id>
+   COGNITO_DOMAIN=https://your-app.auth.us-east-1.amazoncognito.com
+   COGNITO_SSO_PROVIDER=        # optional, e.g. MyCompanySSO: shows "Continue with SSO"
+   ```
+3. Restart the app. Once `COGNITO_REGION`, `COGNITO_USER_POOL_ID` and `COGNITO_CLIENT_ID` are all set, every API route needs a valid login and the UI shows the sign-in screen.
 
-**Ephemeral disk:** FAISS indexes and uploads live on the container filesystem. They are lost when the instance is replaced or scaled to zero. For production persistence, plan **Cloud Storage** (or a database) for `index.faiss` / `chunks.json` and uploads.
+How it works: the sign-in form sends email and password to the backend (`POST /auth/login`), which asks Cognito and returns tokens. The browser keeps them in `sessionStorage`, sends the access token with every call, and renews it with `POST /auth/refresh` when it is about to expire. Sign-up (`/auth/signup`, then `/auth/confirm-signup` with the emailed code) and sign-out (`/auth/logout`) also go through the backend. The backend (`backend/auth.py`) checks every token's signature and client id. "Continue with SSO" uses the Hosted UI redirect instead. The email shown in the UI comes from the id token, because access tokens don't include it.
 
-### Optional persistent storage with GCS
+## Deployment
 
-Set these env vars on Cloud Run:
-- `GCS_BUCKET=<your_bucket_name>`
-- `GCS_PREFIX=go-invoice` (optional)
+### Docker (local)
 
-Behavior:
-- `/ingest` and `/ingest-upload` upload `index.faiss` and `chunks.json` to `gs://<bucket>/<prefix>/indexes/<provider>/...`
-- uploaded PDFs are mirrored to `gs://<bucket>/<prefix>/uploads/...`
-- `/query` auto-downloads index files from GCS if local files are missing
-- check `/storage-status` to verify GCS config at runtime
+`./start.sh --docker` runs `docker compose up --build -d`. It keeps your `data/` folder and uses Ollama on your computer. Open http://localhost:8080/. Logs: `docker compose logs -f`. Stop: `docker compose down`.
 
-**Local Docker test:**
+OpenAI only, without compose:
 
 ```bash
 docker build -t go-invoice:local .
 docker run --rm -p 8080:8080 -e DISABLE_OLLAMA=true -e OPENAI_API_KEY=sk-... go-invoice:local
 ```
 
-Then open `http://localhost:8080/`.
+The Docker image includes Tesseract.
 
-## Project structure
+### Google Cloud Run
 
-Top-level layout:
+Cloud Run uses OpenAI (Ollama doesn't run in the container). Keep the API key in Secret Manager.
 
-```
-.
-├── backend/            FastAPI app + AWS Lambda handler
-├── rag/                OpenAI RAG pipeline (default provider)
-├── rag_local/          Ollama RAG pipeline (local provider)
-├── rag_aws/            Bedrock RAG pipeline (AWS provider)
-├── frontend/           Static SPA (no build step)
-├── data/               Local uploads + FAISS indexes (gitignored)
-├── docs/               README, changelog, architecture notes
-├── Dockerfile          Cloud Run / local uvicorn image
-├── Dockerfile.lambda   AWS Lambda container image
-├── docker-compose.yml  Local dev (mounts data/, points Ollama at host)
-├── template.yaml       AWS SAM stack (Lambda + API Gateway + S3 + DynamoDB + Cognito)
-├── samconfig.toml      SAM deploy defaults (no secrets)
-├── amplify.yml         Amplify Hosting build spec for the frontend
-├── requirements.txt          Runtime deps
-└── requirements-lambda.txt   Extra deps only needed on Lambda
+```bash
+gcloud auth configure-docker
+docker build -t gcr.io/PROJECT_ID/go-invoice:latest .
+docker push gcr.io/PROJECT_ID/go-invoice:latest
+echo -n 'sk-...' | gcloud secrets create openai-api-key --data-file=-     # once
+gcloud run deploy go-invoice --image gcr.io/PROJECT_ID/go-invoice:latest --region us-central1 \
+  --allow-unauthenticated --set-env-vars DISABLE_OLLAMA=true \
+  --set-secrets OPENAI_API_KEY=openai-api-key:latest
 ```
 
-Backend (`backend/`):
-- `app.py`: FastAPI app — RAG, Document Library, Evaluation, and auth routes
-- `auth.py`: Cognito JWT verification + email/password auth (falls back to open dev mode)
-- `eval_store.py`: evaluation persistence — JSON files locally (`EVAL_STORE_BACKEND=json`, default) or DynamoDB on Lambda (`EVAL_STORE_BACKEND=dynamodb`)
-- `lambda_handler.py`: AWS Lambda entrypoint wrapping the FastAPI app
-- `runtime_paths.py`: resolves writable paths (local disk vs Lambda `/tmp`)
+Open the service URL and pick **OpenAI** in the UI.
 
-RAG pipelines (one per provider, same interface):
-- `rag/`: OpenAI embedding + retrieval + answer flow. Key modules: `pdf_parser.py` (PyMuPDF text extraction), `chunking.py` (token-aware chunking), `retrieval.py`, `vector_store.py` (FAISS + metadata), `evaluation.py` (retrieval/judge metrics), `pricing.py` (cost estimates), `pipeline.py`, `cli.py`.
-- `rag_local/`: Ollama pipeline + CLI (local, no API key).
-- `rag_aws/`: Bedrock pipeline (AWS cloud provider).
+- `--allow-unauthenticated` only controls Cloud Run's own access check. If Cognito is set up, the app still requires sign-in.
+- The container's disk is temporary: indexes and uploads are lost when the instance is replaced or scales to zero. To keep them, set `GCS_BUCKET` (and optionally `GCS_PREFIX`). Then indexes (`index.faiss`, `chunks.json`) are copied to `gs://<bucket>/<prefix>/indexes/<provider>/` and PDFs to `gs://<bucket>/<prefix>/uploads/`. Queries download missing indexes from there. Check the setup at `/storage-status`.
 
-Frontend (`frontend/`, plain ES modules, no build step):
-- `index.html`, `styles.css`: nav-based SPA shell (Upload & RAG, Evaluation Dashboard, Document Library, Account).
-- `js/`: `main.js` (bootstrap/nav wiring), `api.js` (fetch + token refresh), `auth.js` + `authView.js` (Cognito flows), `guest.js` (guest-preview mode), `uploadRag.js`, `library.js`, `evaluation.js`, `state.js`, `nav.js`, `toast.js`, `config.js`.
-- `assets/`: logo + provider icons. `data/guest-data.json`: hardcoded sample data shown in guest-preview mode.
+### AWS (Lambda + Amplify)
 
-### Guest preview mode
-
-The Account screen offers a **Continue as guest** button that bypasses login and populates every screen with hardcoded sample data from `frontend/data/guest-data.json`. In guest mode the app makes no backend calls and every mutating action (upload, query, run evaluation, save/delete/grade) is disabled with a prompt to sign in. Guest state is not persisted — a page refresh returns to the real login screen.
-
-### AWS deployment (Lambda + Amplify)
-
-The backend also deploys as a container-image Lambda behind an HTTP API via AWS SAM (`template.yaml`), with S3 for uploads/index sync, DynamoDB for the evaluation store, and an optional Cognito user pool. The frontend deploys separately to Amplify Hosting (`amplify.yml`), which injects the API Gateway URL into `frontend/js/config.js` at build time via the `API_BASE_URL` environment variable. Build/deploy:
+The backend can also run as a Lambda container behind an HTTP API, deployed with AWS SAM (`template.yaml`). It uses S3 for uploads and indexes, DynamoDB for evaluations and an optional Cognito user pool. The frontend goes to Amplify Hosting (`amplify.yml`), which writes the API URL (`API_BASE_URL`) into `frontend/js/config.js` at build time.
 
 ```bash
 sam build
 sam deploy --parameter-overrides OpenAiApiKey=sk-... BudgetAlertEmail=you@example.com
 ```
+
+## Project layout
+
+```
+.
+├── start.sh            One-command setup and start
+├── backend/            FastAPI app (API + serves the UI) and AWS Lambda handler
+├── rag/                OpenAI pipeline
+├── rag_local/          Ollama pipeline (local)
+├── rag_aws/            Bedrock pipeline (AWS)
+├── frontend/           Web UI, plain JavaScript, no build step
+├── data/               Your uploads, indexes and saved results (not in git)
+├── docs/               README, changelog, architecture notes
+├── Dockerfile          Image for Cloud Run and local Docker
+├── Dockerfile.lambda   Image for AWS Lambda
+├── docker-compose.yml  Local Docker (keeps data/, uses Ollama on your computer)
+├── template.yaml       AWS SAM stack (Lambda, API Gateway, S3, DynamoDB, Cognito)
+├── samconfig.toml      SAM deploy defaults (no secrets)
+├── amplify.yml         Amplify Hosting build for the frontend
+├── requirements.txt          Python packages
+└── requirements-lambda.txt   Extra packages for Lambda only
+```
+
+**backend/**
+- `app.py`: all routes (chat, Document Library, Evaluation, sign-in).
+- `auth.py`: Cognito login and token checks. Open when Cognito isn't set up.
+- `eval_store.py`: saves evaluations as JSON files (`EVAL_STORE_BACKEND=json`, default) or in DynamoDB on Lambda (`EVAL_STORE_BACKEND=dynamodb`).
+- `lambda_handler.py`: Lambda entry point.
+- `runtime_paths.py`: picks writable folders (local disk, or `/tmp` on Lambda).
+
+**rag/** (the other pipelines work the same way)
+- `pdf_parser.py`: reads PDF text with PyMuPDF, and uses OCR for scanned pages.
+- `chunking.py`: splits text into chunks by token count.
+- `retrieval.py`, `vector_store.py`: search with FAISS.
+- `evaluation.py`: retrieval and answer-quality scores.
+- `pricing.py`: cost estimates.
+- `pipeline.py`, `cli.py`: the full flow and the command line.
+
+**frontend/**
+- `index.html`, `styles.css`: the page and its sections.
+- `js/`: one file per part, e.g. `main.js` (start-up), `api.js` (calls and token refresh), `auth.js` and `authView.js` (sign-in), `guest.js` (guest preview), `uploadRag.js`, `library.js`, `evaluation.js`.
+- `assets/`: logo and provider icons. `data/guest-data.json`: guest preview sample data.
