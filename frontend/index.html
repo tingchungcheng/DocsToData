@@ -13,7 +13,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
     />
-    <link rel="stylesheet" href="/frontend/styles.css?v=8" />
+    <link rel="stylesheet" href="/frontend/styles.css?v=9" />
   </head>
   <body>
     <div class="app" id="app">
@@ -574,8 +574,17 @@
         </div>
         <div class="documents-body">
           <p class="documents-hint" data-i18n="docs.hint">Checked PDFs are used by the chat. Set each one's type so the right tools are suggested.</p>
+          <div class="documents-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input id="documentsSearch" type="search" autocomplete="off" data-i18n-placeholder="docs.search" placeholder="Search PDFs" />
+          </div>
           <div class="documents-panel">
             <ul id="documentsList" class="documents-list"></ul>
+          </div>
+          <div id="documentsPager" class="documents-pager hidden">
+            <button id="documentsPrevBtn" class="documents-page-btn" type="button" data-i18n="docs.prev">Previous</button>
+            <span id="documentsPageInfo" class="documents-page-info"></span>
+            <button id="documentsNextBtn" class="documents-page-btn" type="button" data-i18n="docs.next">Next</button>
           </div>
         </div>
         <div class="documents-footer">

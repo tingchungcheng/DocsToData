@@ -57,6 +57,11 @@ const documentsBtn = $("documentsBtn");
 const documentsBtnLabel = $("documentsBtnLabel");
 const documentsOverlay = $("documentsOverlay");
 const documentsList = $("documentsList");
+const documentsSearch = $("documentsSearch");
+const documentsPager = $("documentsPager");
+const documentsPageInfo = $("documentsPageInfo");
+const documentsPrevBtn = $("documentsPrevBtn");
+const documentsNextBtn = $("documentsNextBtn");
 const recentList = $("recentList");
 const reportOverlay = $("reportOverlay");
 const reportContent = $("reportContent");
@@ -64,6 +69,11 @@ const exportFormatEl = $("exportFormat");
 
 const DOC_TYPES_KEY = "d2d.docTypes.v1";
 const ASSETS_BASE_URL = new URL("../assets/", import.meta.url);
+
+const DOCS_PER_PAGE = 10;
+// Search text and current page (1-based) of the Documents picker.
+let docsQuery = "";
+let docsPage = 1;
 
 let session = createSession();
 let activeCommand = null;
@@ -142,10 +152,34 @@ function updateDocumentsBtnLabel() {
   documentsBtn.classList.toggle("is-empty", total === 0);
 }
 
+/** Documents matching the picker's search box (all of them when it's empty). */
+function filteredDocuments() {
+  const q = docsQuery.trim().toLowerCase();
+  const docs = allDocuments();
+  return q ? docs.filter((n) => n.toLowerCase().includes(q)) : docs;
+}
+
 function renderDocumentsList() {
   documentsList.replaceChildren();
   const sel = selectedSet();
-  for (const name of allDocuments()) {
+  const matches = filteredDocuments();
+  const pages = Math.max(1, Math.ceil(matches.length / DOCS_PER_PAGE));
+  docsPage = Math.min(Math.max(1, docsPage), pages);
+  documentsPager.classList.toggle("hidden", pages <= 1);
+  documentsPageInfo.textContent = t("docs.page", { page: docsPage, pages });
+  documentsPrevBtn.disabled = docsPage <= 1;
+  documentsNextBtn.disabled = docsPage >= pages;
+
+  if (!matches.length && docsQuery.trim()) {
+    const empty = document.createElement("li");
+    empty.className = "documents-empty";
+    empty.textContent = t("docs.noMatch");
+    documentsList.appendChild(empty);
+    return;
+  }
+
+  const start = (docsPage - 1) * DOCS_PER_PAGE;
+  for (const name of matches.slice(start, start + DOCS_PER_PAGE)) {
     const item = document.createElement("li");
     item.className = "documents-item";
 
@@ -199,8 +233,16 @@ function renderDocumentsList() {
 
 function setAllDocumentSelection(checked) {
   const sel = selectedSet();
-  sel.clear();
-  if (checked) for (const name of allDocuments()) sel.add(name);
+  // While searching, Select all / Clear all act on the matching PDFs only.
+  if (docsQuery.trim()) {
+    for (const name of filteredDocuments()) {
+      if (checked) sel.add(name);
+      else sel.delete(name);
+    }
+  } else {
+    sel.clear();
+    if (checked) for (const name of allDocuments()) sel.add(name);
+  }
   renderDocumentsList();
   updateDocumentsBtnLabel();
   renderContextRow();
@@ -1007,6 +1049,9 @@ function autoResize() {
 }
 
 function showDocumentsModal() {
+  docsQuery = "";
+  docsPage = 1;
+  documentsSearch.value = "";
   renderDocumentsList();
   documentsOverlay.classList.remove("hidden");
   popIn(documentsOverlay.firstElementChild);
@@ -1108,6 +1153,19 @@ export function initUploadRag() {
   $("closeDocumentsBtn").addEventListener("click", hideDocumentsModal);
   $("selectAllDocumentsBtn").addEventListener("click", () => setAllDocumentSelection(true));
   $("clearDocumentsBtn").addEventListener("click", () => setAllDocumentSelection(false));
+  documentsSearch.addEventListener("input", () => {
+    docsQuery = documentsSearch.value;
+    docsPage = 1;
+    renderDocumentsList();
+  });
+  documentsPrevBtn.addEventListener("click", () => {
+    docsPage -= 1;
+    renderDocumentsList();
+  });
+  documentsNextBtn.addEventListener("click", () => {
+    docsPage += 1;
+    renderDocumentsList();
+  });
   documentsOverlay.addEventListener("click", (e) => {
     if (e.target === documentsOverlay) hideDocumentsModal();
   });
