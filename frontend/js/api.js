@@ -55,11 +55,12 @@ export async function apiFetch(path, options = {}) {
 
 export const api = {
   get: (path) => apiFetch(path),
-  post: (path, body) =>
+  post: (path, body, { signal } = {}) =>
     apiFetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal,
     }),
   del: (path) => apiFetch(path, { method: "DELETE" }),
 };

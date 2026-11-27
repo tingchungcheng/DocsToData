@@ -1354,6 +1354,18 @@ select {
   transform: none;
 }
 
+.send-btn.is-stop {
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+.send-btn.is-stop svg {
+  fill: currentColor;
+  stroke: none;
+  width: 16px;
+  height: 16px;
+}
+
 .send-btn svg {
   width: 18px;
   height: 18px;

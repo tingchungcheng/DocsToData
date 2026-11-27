@@ -69,6 +69,24 @@ let session = createSession();
 let activeCommand = null;
 let menuIndex = 0;
 let busy = false;
+// Aborts the in-flight /query while a chat request runs; null when idle.
+let inflight = null;
+
+const SEND_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>';
+const STOP_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3" /></svg>';
+
+/** Swap the send arrow for a stop square while a request runs, and back. */
+function setSendMode(running) {
+  sendBtn.classList.toggle("is-stop", running);
+  sendBtn.innerHTML = running ? STOP_ICON : SEND_ICON;
+  const label = t(running ? "chat.stop" : "chat.send");
+  sendBtn.setAttribute("aria-label", label);
+  sendBtn.title = label;
+}
+
+function stopRequest() {
+  inflight?.abort();
+}
 let latestReportText = "";
 /** The latest thing #action / "Save to folder" would write. */
 let lastResult = null;
@@ -700,7 +718,7 @@ function safeName(s) {
   );
 }
 
-async function runTool(cmd, text) {
+async function runTool(cmd, text, signal) {
   if (cmd.local) {
     if (lastResult) await saveResult(lastResult);
     else system(t("chat.nothingToSave"));
@@ -730,9 +748,9 @@ async function runTool(cmd, text) {
   const typing = addTyping();
   let data;
   try {
-    data = await api.post("/query", payload);
+    data = await api.post("/query", payload, { signal });
   } catch (err) {
-    if (teach) failTeach(err.message);
+    if (teach) failTeach(signal?.aborted ? t("chat.stopped") : err.message);
     throw err;
   } finally {
     typing.remove();
@@ -824,17 +842,22 @@ async function submit() {
   addMessage({ role: "user", text, command: cmd.id === "ask" ? null : cmd.id });
 
   busy = true;
-  sendBtn.disabled = true;
+  inflight = new AbortController();
+  const { signal } = inflight;
+  setSendMode(true);
   try {
-    await runTool(cmd, text);
+    await runTool(cmd, text, signal);
   } catch (err) {
-    if (!(err instanceof ApiError && err.status === 401)) {
+    if (signal.aborted) {
+      system(t("chat.stopped"));
+    } else if (!(err instanceof ApiError && err.status === 401)) {
       system(`Error: ${err.message}`);
       showToast(err.message, "error");
     }
   } finally {
     busy = false;
-    sendBtn.disabled = false;
+    inflight = null;
+    setSendMode(false);
     renderRecent();
   }
 }
@@ -996,7 +1019,10 @@ function hideDocumentsModal() {
 export function initUploadRag() {
   composer.addEventListener("submit", (e) => {
     e.preventDefault();
-    submit();
+    // While a request runs the send button is a stop button; Enter in the
+    // textarea still goes through submit(), which ignores it while busy.
+    if (busy && e.submitter === sendBtn) stopRequest();
+    else submit();
   });
 
   questionInput.addEventListener("input", () => {
