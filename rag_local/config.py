@@ -18,6 +18,10 @@ class LocalSettings:
     ollama_chat_model: str
     ollama_embed_model: str
     vector_dim: int
+    # None = let the model decide. False turns off "thinking" on reasoning
+    # models such as qwen3.5, which otherwise spend many tokens (and seconds)
+    # before answering. Non-thinking models ignore think=false.
+    ollama_think: bool | None = False
 
 
 def load_local_settings() -> LocalSettings:
@@ -30,8 +34,17 @@ def load_local_settings() -> LocalSettings:
     load_dotenv()
     return LocalSettings(
         ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip(),
-        ollama_chat_model=os.getenv("OLLAMA_CHAT_MODEL", "llama3.1:8b").strip(),
+        ollama_chat_model=os.getenv("OLLAMA_CHAT_MODEL", "qwen3.5:9b").strip(),
         ollama_embed_model=os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text:latest").strip(),
         vector_dim=int(os.getenv("OLLAMA_VECTOR_DIM", "768")),
+        ollama_think=_parse_think(os.getenv("OLLAMA_THINK", "false")),
     )
 
+
+def _parse_think(raw: str) -> bool | None:
+    """Map OLLAMA_THINK to Ollama's `think` field: true/false, or auto (omit it)."""
+
+    value = raw.strip().lower()
+    if value in ("", "auto", "default"):
+        return None
+    return value in ("1", "true", "yes", "on")

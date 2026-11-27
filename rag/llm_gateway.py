@@ -133,6 +133,8 @@ class OllamaGateway:
             "messages": messages,
             "options": options,
         }
+        if self.settings.ollama_think is not None:
+            payload["think"] = self.settings.ollama_think
         response = requests.post(url, json=payload, timeout=300)
         response.raise_for_status()
         data = response.json()
