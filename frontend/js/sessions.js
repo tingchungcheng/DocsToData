@@ -15,16 +15,48 @@ const listeners = new Set();
 function load() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    for (const s of parsed) for (const m of s.messages || []) expandMessage(m);
+    return parsed;
   } catch {
     return [];
+  }
+}
+
+// Browser storage is only ~5 MB, so an extract answer's download copy
+// (result.content) is not stored twice: when it is exactly the card's data
+// pretty-printed, we save a flag and rebuild it on load.
+function extractContent(m) {
+  return JSON.stringify({ ...m.card.data, _sources: m.card.sources }, null, 2);
+}
+
+function compactMessage(m) {
+  if (
+    m.result?.format === "json" &&
+    m.card?.type === "extract" &&
+    m.card.data &&
+    m.result.content === extractContent(m)
+  ) {
+    const { content, ...rest } = m.result;
+    return { ...m, result: { ...rest, contentFromCard: true } };
+  }
+  return m;
+}
+
+function expandMessage(m) {
+  if (m.result?.contentFromCard && m.card?.data) {
+    delete m.result.contentFromCard;
+    m.result.content = extractContent(m);
   }
 }
 
 function persist() {
   if (!persistEnabled) return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.slice(0, MAX_SESSIONS)));
+    const compact = sessions
+      .slice(0, MAX_SESSIONS)
+      .map((s) => ({ ...s, messages: s.messages.map(compactMessage) }));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(compact));
   } catch {
     // Storage full or blocked: keep working in memory.
   }
