@@ -4,6 +4,8 @@ import os
 import time
 from pathlib import Path
 import shutil
+import uuid
+from datetime import date
 
 from typing import Any, Literal
 
@@ -25,7 +27,8 @@ from backend.auth import (
     sign_up,
 )
 from backend.runtime_paths import app_data_dir, is_lambda
-from backend import workspace
+from backend import naming, workspace
+from rag.pdf_parser import extract_pdf_pages
 from rag.evaluation import compute_retrieval_metrics, judge_generation
 from rag.pipeline import RagPipeline
 from rag.pricing import estimate_chat_cost_usd, is_free_provider
@@ -518,7 +521,7 @@ def list_document_details(
     for chunk in store.chunks:
         entry = by_source.setdefault(
             chunk.source,
-            {"source": chunk.source, "chunks": 0, "pages": set()},
+            {"source": chunk.source, "chunks": 0, "pages": set(), "original_name": chunk.original_name},
         )
         entry["chunks"] = int(entry["chunks"]) + 1
         entry["pages"].add(chunk.page)
@@ -528,6 +531,7 @@ def list_document_details(
             "source": name,
             "chunks": info["chunks"],
             "pages": len(info["pages"]),
+            "original_name": info["original_name"],
         }
         for name, info in by_source.items()
     ]
@@ -570,6 +574,58 @@ def delete_document(
         "removed_chunks": removed,
         "total_documents": len(store.list_sources()),
     }
+
+
+class RenameRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
+@app.post("/documents/{provider}/{source}/rename")
+def rename_document(
+    provider: str, source: str, req: RenameRequest, user: dict[str, Any] = Depends(get_current_user)
+) -> dict[str, object]:
+    """Give an indexed document a new display name (its `source`).
+
+    English: Only the name changes; chunks and vectors stay as they are. The
+    original upload file name is kept on each chunk as `original_name`.
+    中文: 只改顯示名稱（source），chunk 與向量不變；原始檔名保留在 `original_name`。
+    """
+
+    if provider not in {"openai", "ollama"}:
+        raise HTTPException(status_code=400, detail="provider must be openai or ollama")
+    _require_ollama(provider)
+
+    new_name = naming.clean_user_name(req.name)
+    if not new_name:
+        raise HTTPException(status_code=400, detail="name is empty")
+
+    index_dir = _resolve_data_dir("data/index" if provider == "openai" else "data/index_local")
+    _ensure_index_from_gcs(index_dir=index_dir, provider=provider)
+    dim = 1536 if provider == "openai" else int(os.getenv("OLLAMA_VECTOR_DIM", "768"))
+    try:
+        store = FaissStore.load(in_dir=index_dir, dim=dim)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="No index found for this provider") from None
+
+    sources = store.list_sources()
+    if source not in sources:
+        raise HTTPException(status_code=404, detail=f"No document named '{source}' found")
+    if new_name == source:
+        return {"status": "ok", "provider": provider, "source": source, "name": new_name}
+    if new_name in sources:
+        raise HTTPException(status_code=409, detail=f"A document named '{new_name}' already exists")
+
+    for chunk in store.chunks:
+        if chunk.source == source:
+            chunk.source = new_name
+    store.save(out_dir=index_dir)
+    _sync_index_to_gcs(index_dir=index_dir, provider=provider)
+
+    old_file, new_file = UPLOAD_DIR / f"{source}.pdf", UPLOAD_DIR / f"{new_name}.pdf"
+    if old_file.exists() and not new_file.exists():
+        old_file.rename(new_file)
+
+    return {"status": "ok", "provider": provider, "source": source, "name": new_name}
 
 
 @app.post("/query")
@@ -622,9 +678,15 @@ def ingest_upload(
     chunk_size: int = Form(default=700),
     chunk_overlap: int = Form(default=120),
     teach: bool = Form(default=False),
+    auto_rename: bool = Form(default=True),
+    type_hint: str | None = Form(default=None),
     user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, object]:
     """Upload one or more PDFs via browser and ingest them into the shared index.
+
+    With `auto_rename` (default on) each PDF gets a display name such as
+    `2025-12-26_Quotation_Acme-Corp-v1` (rules in backend/naming.py); the
+    uploaded file name is kept as `original_name`.
 
     English: Saves uploads under `data/uploads`, then appends each PDF to the index.
     中文: 將上傳 PDF 存到 `data/uploads`，並逐一附加到共用索引。
@@ -643,6 +705,10 @@ def ingest_upload(
 
     ingested: list[dict[str, object]] = []
     saved_paths: list[str] = []
+    try:
+        existing = set(pipeline.list_sources(in_dir=index_dir))
+    except FileNotFoundError:
+        existing = set()
 
     try:
         for file in files:
@@ -653,12 +719,27 @@ def ingest_upload(
             if not safe_name.lower().endswith(".pdf"):
                 raise HTTPException(status_code=400, detail=f"only PDF files are supported: {safe_name}")
 
-            saved_path = UPLOAD_DIR / safe_name
-            with saved_path.open("wb") as out:
+            incoming = UPLOAD_DIR / f".incoming-{uuid.uuid4().hex}.pdf"
+            with incoming.open("wb") as out:
                 shutil.copyfileobj(file.file, out)
-            _upload_to_gcs(str(saved_path), _blob_path("uploads", safe_name))
+
+            doc_type = naming.guess_type_from_name(safe_name)
+            if auto_rename:
+                pages = extract_pdf_pages(str(incoming))
+                text = "\n".join(page_text for _, page_text in pages[:2])
+                display_name, doc_type = naming.build_display_name(
+                    text, safe_name, existing, type_hint=type_hint, upload_date=date.today()
+                )
+                stored_name = f"{display_name}.pdf"
+            else:
+                stored_name = safe_name
+            saved_path = UPLOAD_DIR / stored_name
+            incoming.replace(saved_path)
+            existing.add(saved_path.stem)
+
+            _upload_to_gcs(str(saved_path), _blob_path("uploads", stored_name))
             if _s3_enabled():
-                _upload_to_s3(str(saved_path), _s3_key("uploads", safe_name))
+                _upload_to_s3(str(saved_path), _s3_key("uploads", stored_name))
             saved_paths.append(str(saved_path))
 
             stats = pipeline.ingest_pdf(
@@ -667,7 +748,9 @@ def ingest_upload(
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap,
                 teach=teach,
+                original_name=safe_name,
             )
+            stats["doc_type"] = doc_type
             ingested.append(stats)
 
         _sync_index_to_gcs(index_dir=index_dir, provider=provider)

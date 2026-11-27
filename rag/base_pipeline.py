@@ -73,6 +73,7 @@ class BaseRagPipeline:
         replace_existing: bool = True,
         chunking_strategy: ChunkingStrategy | None = None,
         teach: bool = False,
+        original_name: str | None = None,
     ) -> dict[str, object]:
         """End-to-end ingestion: parse -> chunk -> embed -> append to index.
 
@@ -127,6 +128,8 @@ class BaseRagPipeline:
             chunk_size=chunk_size,
             chunking_strategy=strategy,
         )
+        for chunk in chunks:
+            chunk.original_name = original_name or Path(pdf_path).name
         if trace:
             trace.add(
                 "chunk",
@@ -176,6 +179,7 @@ class BaseRagPipeline:
 
         stats: dict[str, object] = {
             "source": source_name,
+            "original_name": original_name or Path(pdf_path).name,
             "pages": len(pages),
             "chunks": len(chunks),
             "vectors": len(embeddings),

@@ -27,6 +27,8 @@ class Chunk:
     chunking_strategy: str | None = None
     parent_id: str | None = None
     parent_text: str | None = None
+    # File name as uploaded, before the auto-rename in backend/naming.py.
+    original_name: str | None = None
 
 
 @dataclass

@@ -248,6 +248,22 @@ function setAllDocumentSelection(checked) {
   renderContextRow();
 }
 
+/** Carry a renamed document's type and selection over to its new name. */
+export async function renameDocumentLocally(oldName, newName) {
+  if (docTypes[oldName]) {
+    docTypes[newName] = docTypes[oldName];
+    delete docTypes[oldName];
+    saveDocTypes();
+  }
+  const provider = currentProvider();
+  const sel = selectedSet();
+  if (sel.delete(oldName)) sel.add(newName);
+  knownDocumentsByProvider[provider] = (knownDocumentsByProvider[provider] || []).map((n) =>
+    n === oldName ? newName : n,
+  );
+  await refreshDocuments();
+}
+
 export async function refreshDocuments() {
   const guestData = isGuest() ? getGuestData() : null;
   const data = guestData
@@ -912,15 +928,13 @@ async function ingestFiles(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
 
+  // The server renames each PDF by its type (see backend/naming.py); a tool
+  // picked for one document type tells it what an unlabelled PDF probably is.
   const hint = activeCommand?.docTypes?.length === 1 ? activeCommand.docTypes[0] : null;
-  for (const file of files) {
-    const guess = guessDocType(file.name);
-    docTypes[file.name] = guess === "other" && hint ? hint : guess;
-  }
-  saveDocTypes();
 
   const form = new FormData();
   form.append("provider", currentProvider());
+  if (hint) form.append("type_hint", hint);
   const teach = isTeachOn();
   if (teach) form.append("teach", "true");
   for (const file of files) form.append("files", file);
@@ -943,12 +957,20 @@ async function ingestFiles(fileList) {
     if (!res.ok) throw new Error(json.detail || "Ingest failed");
     const ingested = Array.isArray(json.ingest) ? json.ingest : [json.ingest];
     for (const item of ingested) {
+      if (item.doc_type) docTypes[item.source] = item.doc_type;
+      const renamed = item.original_name && item.original_name.replace(/\.pdf$/i, "") !== item.source;
       addMessage({
         role: "system",
-        text: t("chat.ingested", { source: item.source, pages: item.pages, chunks: item.chunks }),
+        text: t(renamed ? "chat.ingestedRenamed" : "chat.ingested", {
+          source: item.source,
+          original: item.original_name,
+          pages: item.pages,
+          chunks: item.chunks,
+        }),
         teach: item.teach || null,
       });
     }
+    saveDocTypes();
     if (teach) playTeach(ingested[0]?.teach);
     showToast(`Indexed ${files.length} PDF(s)`, "success");
   } catch (err) {
