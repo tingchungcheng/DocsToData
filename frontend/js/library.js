@@ -77,12 +77,6 @@ function renderDocuments(docs) {
 
     const actions = document.createElement("div");
     actions.className = "library-doc-actions";
-    const renameBtn = document.createElement("button");
-    renameBtn.className = "btn btn-ghost btn-sm";
-    renameBtn.type = "button";
-    renameBtn.textContent = t("library.rename");
-    renameBtn.addEventListener("click", () => startRename(doc.source, name, actions));
-    actions.appendChild(renameBtn);
     const delBtn = document.createElement("button");
     delBtn.className = "btn btn-danger btn-sm";
     delBtn.type = "button";
@@ -90,6 +84,15 @@ function renderDocuments(docs) {
     delBtn.addEventListener("click", () => deleteDocument(doc.source, card));
     actions.appendChild(delBtn);
 
+    const renameBtn = document.createElement("button");
+    renameBtn.className = "library-doc-rename";
+    renameBtn.type = "button";
+    renameBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" /><path d="M13.5 6.5l4 4" /></svg>';
+    renameBtn.title = t("library.rename");
+    renameBtn.setAttribute("aria-label", t("library.renameLabel", { name: doc.source }));
+    renameBtn.addEventListener("click", () => startRename(doc.source, name, card));
+
+    card.appendChild(renameBtn);
     card.appendChild(icon);
     card.appendChild(name);
     card.appendChild(original);
@@ -100,7 +103,7 @@ function renderDocuments(docs) {
 }
 
 /** Swap the card's title for an input; Enter or Save renames, Esc cancels. */
-function startRename(source, nameEl, actions) {
+function startRename(source, nameEl, card) {
   if (blockIfGuest("Sign in to manage documents. You're viewing sample data as a guest.")) return;
   if (nameEl.querySelector("input")) return;
 
@@ -127,7 +130,7 @@ function startRename(source, nameEl, actions) {
 
   const close = () => {
     nameEl.textContent = source;
-    actions.hidden = false;
+    card.classList.remove("is-renaming");
   };
   cancel.addEventListener("click", close);
   input.addEventListener("keydown", (e) => {
@@ -155,7 +158,7 @@ function startRename(source, nameEl, actions) {
     }
   });
 
-  actions.hidden = true;
+  card.classList.add("is-renaming");
   nameEl.replaceChildren(form);
   input.focus();
   input.select();
